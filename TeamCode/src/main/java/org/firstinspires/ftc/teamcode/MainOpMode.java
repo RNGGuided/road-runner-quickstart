@@ -119,7 +119,13 @@ public class MainOpMode extends OpMode {
             wristLeft.setPosition(0.5);
         }
         else if (gamepad1.x) {
-            //claw.setPosition(1);
+            claw.setPosition(1);
+
+            try {
+                Thread.sleep(100); // 100 milliseconds = 0.1 seconds
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             wristRight.setPosition(1);
             wristLeft.setPosition(1);
         }

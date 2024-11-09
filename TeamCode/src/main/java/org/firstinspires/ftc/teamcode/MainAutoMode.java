@@ -1,80 +1,107 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.autonomous;
 
 import androidx.annotation.NonNull;
 
-// RR-specific imports
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
-
-// Non-RR imports
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
-import com.acmerobotics.roadrunner.ParallelAction;
+import org.firstinspires.ftc.teamcode.Slides;
+import org.firstinspires.ftc.teamcode.Arm;
+import org.firstinspires.ftc.teamcode.Claw;
 
-@Autonomous(name = "Drive Forward (48 inches) - Road Runner 1.0.x")
+@Config
+@Autonomous(name = "Main Auto Mode", group = "Autonomous")
 public class MainAutoMode extends LinearOpMode {
 
-    private Slides slides; // Declare slides
-
     @Override
-    public void runOpMode() throws InterruptedException {
-        // myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(9, 60, Math.toRadians(90)))
-        // .strafeTo(new Vector2d(37, 63))
-        // .strafeTo(new Vector2d(30, 63))
-        // .strafeTo(new Vector2d(24, 30))
-        // .turn((Math.toRadians(140)))
-        // .strafeTo(new Vector2d(17.8, 14.5))
-        // .turn((Math.toRadians(-135)))
-        // .strafeTo(new Vector2d(12.5, 34))
+    public void runOpMode() {
+        // Initialize subsystems
+        Slides slides = new Slides(hardwareMap);
+        Arm arm = new Arm(hardwareMap);
+        Claw claw = new Claw(hardwareMap);
 
-        Pose2d initialPose = new Pose2d(9, 61.5, Math.toRadians(270));
-        // Pose2d initialPose = new Pose2d(-12, 60, Math.toRadians(270));
-        MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
+        // Define actions
+        Action slideTask = slides.moveSlidesToHeightAction(17, 1);
+        Action slideTask1 = slides.moveSlidesToHeightAction(20, 1);
+        Action slideTask2 = slides.moveSlidesToHeightAction(26.5, 1);
+        Action slideTask3 = slides.moveSlidesToHeightAction(3000, 1);
+        Action ArmTask2 = arm.moveToPositionActionArm(0.5, 0.5);
+        Action ArmTask3 = arm.moveToPositionActionArm(1.0, 1.0);
+        Action ClawOpen = claw.setPositionActionClaw(0);
+        Action ClawClose = claw.setPositionActionClaw(1);
 
-        // Initialize slides
-        slides = new Slides(hardwareMap);
+        // Initialize MecanumDrive
+        MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(9, 61.5, Math.toRadians(270)));
 
-        TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(6, 32)) // (37, 63) -> (6, 32)
-                .waitSeconds(2)
-                .strafeTo(new Vector2d(6, 39))       // (30, 63) -> (6, 39)
-                .strafeTo(new Vector2d(44, 40.5))    // (24, 30) -> (39, 45)
-                .turn(Math.toRadians(140))          // Adjusted 140-degree turn
-                .strafeTo(new Vector2d(48, 53))     // (17.8, 14.5) -> (45.5, 51.2)
-                .turn(Math.toRadians(-135))         // Adjusted -135-degree turn
-                .strafeTo(new Vector2d(58.5, 37));  // (12.5, 34) -> (34, 47.5)
-        // .strafeTo(new Vector2d(-36, 60))
-        // .strafeTo(new Vector2d(-36, 12))
-        // .strafeTo(new Vector2d(-48, 12))
-        // .strafeTo(new Vector2d(-48, 60))
-        // .strafeTo(new Vector2d(-48, 12))
-        // .strafeTo(new Vector2d(-57, 12))
-        // .strafeTo(new Vector2d(-57, 60))
-        // .strafeTo(new Vector2d(-57, 12))
-        // .strafeTo(new Vector2d(-60, 12))
-        // .strafeTo(new Vector2d(-60, 60));
+        // Define trajectory
+        Action trajectoryAction = drive.actionBuilder(new Pose2d(9, 61.5, Math.toRadians(270)))
+                .afterDisp(10, slideTask2)
+                .afterDisp(5, ArmTask2)
+                .strafeTo(new Vector2d(6, 32))
+                .afterDisp(0, slideTask1)
+                .waitSeconds(1.5)
+                .afterTime(2, ClawOpen)
+                .waitSeconds(2.5)
+                .strafeTo(new Vector2d(6, 39))
+                .afterDisp(36, ArmTask3)
+                .afterDisp(36, slideTask)
+                .afterTime(3, ClawClose)
+                .afterTime(4, ArmTask2)
+                .waitSeconds(4.5)
+                .strafeTo(new Vector2d(44, 40.5))
+                .turn(Math.toRadians(140))
+                .strafeTo(new Vector2d(48, 53))
+                .turn(Math.toRadians(-135))
+                .strafeTo(new Vector2d(58.5, 37))
+                .build();
 
+        // Pre-run telemetry
+        telemetry.addLine("Robot Initialized. Waiting for Start.");
+        telemetry.update();
+
+        while (!isStopRequested() && !opModeIsActive()) {
+            telemetry.addLine("Waiting for Start...");
+            telemetry.update();
+        }
 
         waitForStart();
 
+        if (isStopRequested()) return;
+
+        // Execute actions
         Actions.runBlocking(
                 new SequentialAction(
-                        new ParallelAction(
-                                tab1.build()// Executes trajectory
-                                // Moves slides in parallel
-                        )
+                        trajectoryAction, // Execute trajectory with integrated slide/arm/claw tasks
+                        new ParallelAction( // Example of running actions in parallel
+                                (packet) -> {
+                                    telemetry.addLine("Parallel Action Running!");
+                                    telemetry.update();
+                                    return false;
+                                },
+                                ClawClose // Close the claw in parallel
+                        ),
+                        new Action() { // Custom action
+                            @Override
+                            public boolean run(@NonNull TelemetryPacket packet) {
+                                telemetry.addLine("Custom Action Complete!");
+                                telemetry.update();
+                                return false; // Complete action immediately
+                            }
+                        }
                 )
         );
+
+        telemetry.addLine("Autonomous Complete.");
+        telemetry.update();
     }
 }
+
