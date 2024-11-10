@@ -22,7 +22,9 @@ public class MyClass {
         .turn(Math.toRadians(140))            // Adjusted 140-degree turn
         .strafeTo(new Vector2d(45.5, 51.2))  // (17.8, 14.5) -> (45.5, 51.2)
         .turn(Math.toRadians(-140))           // Adjusted -135-degree turn
-        .strafeTo(new Vector2d(58.2, 39))    // (12.5, 34) -> (34, 47.5)
+        .strafeTo(new Vector2d(58.2, 39))// (12.5, 34) -> (34, 47.5)
+                        .turn(Math.toRadians(140))
+                        .strafeTo(new Vector2d(45.5,51.2))
                 .build());
 
 
