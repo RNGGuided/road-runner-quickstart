@@ -90,8 +90,8 @@ public class MainOpMode extends OpMode {
             slideLeft.setPower(-gamepad1.left_trigger); // Left trigger moves both slides down
             slideRight.setPower(gamepad1.left_trigger);
         } else {
-            slideLeft.setPower(0.1); // Freeze slides when no input
-            slideRight.setPower(0.1);
+            slideLeft.setPower(-0.1); // Freeze slides when no input
+            slideRight.setPower(-0.1);
         }
         if (gamepad1.right_bumper)
         {

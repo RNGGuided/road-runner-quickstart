@@ -24,8 +24,8 @@ import org.firstinspires.ftc.teamcode.MecanumDrive;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
 
-@Autonomous(name = "LeftSide Auton")
-public class MainAutoMode extends LinearOpMode {
+@Autonomous(name = "RightSide Auton")
+public class MainAutoMode1 extends LinearOpMode {
 
     private Slides slides; // Declare slides
     private Arm arm;
@@ -50,27 +50,16 @@ public class MainAutoMode extends LinearOpMode {
 
         Action Pick = new SequentialAction(
                 arm.moveToPositionActionArm(1,1),
-                new SleepAction(2),
-                slides.moveSlidesToHeightAction(17, .75),
-                new SleepAction(1),
-                claw.setPositionActionClaw(1),
-                new SleepAction(1),
-                arm.moveToPositionActionArm(.5,.5),
-                slides.moveSlidesToHeightAction(49, 1),
-                new SleepAction(.5),
-                claw.setPositionActionClaw(0)
-        );
-        Action Pick2 = new SequentialAction(
-                slides.moveSlidesToHeightAction(17, .75),
-                arm.moveToPositionActionArm(1,1),
                 new SleepAction(3),
                 slides.moveSlidesToHeightAction(17, .75),
                 claw.setPositionActionClaw(1),
-                new SleepAction(1),
+                new SleepAction(2),
                 arm.moveToPositionActionArm(.5,.5),
-                slides.moveSlidesToHeightAction(49, 1),
-                new SleepAction(5),
-                claw.setPositionActionClaw(0)
+                slides.moveSlidesToHeightAction(45, 1 )
+
+
+
+
         );
         Action slideTask = slides.moveSlidesToHeightAction(17, 1 );
         Action slideTask1 = slides.moveSlidesToHeightAction(22, .75 );
@@ -92,39 +81,27 @@ public class MainAutoMode extends LinearOpMode {
         // .turn((Math.toRadians(-135)))
         // .strafeTo(new Vector2d(12.5, 34))
 
-        Pose2d initialPose = new Pose2d(9, 61.5, Math.toRadians(270));
-        // Pose2d initialPose = new Pose2d(-12, 60, Math.toRadians(270));
+        //Pose2d initialPose = new Pose2d(9, 61.5, Math.toRadians(270));
+         Pose2d initialPose = new Pose2d(-12, 60, Math.toRadians(270));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
 
         // Initialize slides
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(6, 35))// (37, 63) -> (6, 32)
+                .strafeTo(new Vector2d(-6,35))
                 .waitSeconds(4)
-                .strafeTo(new Vector2d(6, 39))// (30, 63) -> (6, 39)
-                .strafeTo(new Vector2d(48, 44))// (24, 30) -> (39, 45)
-                .waitSeconds(5)
-                .turn(Math.toRadians(140))// Adjusted 140-degree turn
-                .strafeTo(new Vector2d(50.5, 55))// (17.8, 14.5) -> (45.5, 51.2)
-                .waitSeconds(3)
-                .turn(Math.toRadians(-140))         // Adjusted -135-degree turn
-                .strafeTo(new Vector2d(58.25, 44)) // (12.5, 34) -> (34, 47.5)
-                .waitSeconds(3)
-                .turn(Math.toRadians(-220))
-                .strafeTo(new Vector2d(48.5,54))
-        .waitSeconds(1.5)
-                .strafeTo(new Vector2d(49.5,54))
-        .waitSeconds(5);
-        // .strafeTo(new Vector2d(-36, 60))
-        // .strafeTo(new Vector2d(-36, 12))
-        // .strafeTo(new Vector2d(-48, 12))
-        // .strafeTo(new Vector2d(-48, 60))
-        // .strafeTo(new Vector2d(-48, 12))
-        // .strafeTo(new Vector2d(-57, 12))
-        // .strafeTo(new Vector2d(-57, 60))
-        // .strafeTo(new Vector2d(-57, 12))
-        // .strafeTo(new Vector2d(-60, 12))
-        // .strafeTo(new Vector2d(-60, 60));
+         .strafeTo(new Vector2d(-36, 35))
+                .strafeTo(new Vector2d(-36, 12))
+
+         .strafeTo(new Vector2d(-36, 12))
+         .strafeTo(new Vector2d(-48, 12))
+         .strafeTo(new Vector2d(-48, 60))
+         .strafeTo(new Vector2d(-48, 12))
+         .strafeTo(new Vector2d(-57, 12))
+         .strafeTo(new Vector2d(-57, 60))
+         .strafeTo(new Vector2d(-57, 12))
+         .strafeTo(new Vector2d(-60, 12))
+         .strafeTo(new Vector2d(-60, 60));
 
         waitForStart();
         Actions.runBlocking(ClawClose);
@@ -135,11 +112,8 @@ public class MainAutoMode extends LinearOpMode {
                         new ParallelAction(
                                 tab1.build(),
                                 new SequentialAction(
-                                Block,
-                                new SleepAction(3),
-                                Pick,
-                                        new SleepAction(5),
-                                Pick2
+                                        Block
+                                        // Execute the trajectory
                                 )
                         )
                 )
