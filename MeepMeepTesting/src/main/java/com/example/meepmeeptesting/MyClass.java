@@ -12,7 +12,7 @@ public class MyClass {
 
         RoadRunnerBotEntity myBot = new DefaultBotBuilder(meepMeep)
                 // Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
-                .setConstraints(60, 60, Math.toRadians(180), Math.toRadians(180), 15)
+                .setConstraints(100, 100, Math.toRadians(180), Math.toRadians(180), 15)
                 .build();
 
         /*myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(9, 61.5, Math.toRadians(270)))
@@ -28,7 +28,36 @@ public class MyClass {
                 .build());*/
 
 
-        myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(-12, 60, Math.toRadians(270)))
+        myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(-15.15, 60, Math.toRadians(270)))
+                .strafeTo(new Vector2d(-6,35))
+                .waitSeconds(1)
+                .strafeTo(new Vector2d(-6,45))
+                .splineToLinearHeading(new Pose2d(-35,36,Math.toRadians(180)), Math.toRadians(180))
+                .strafeToLinearHeading(new Vector2d(-38, 12), Math.PI)
+                .splineToConstantHeading(new Vector2d(-38, 12), Math.PI)
+                .strafeTo(new Vector2d(-46, 12))
+                .strafeTo(new Vector2d(-46, 60))
+                .strafeTo(new Vector2d(-46, 12))
+                .strafeTo(new Vector2d(-57, 12))
+                .strafeTo(new Vector2d(-57, 60))
+                .strafeToLinearHeading(new Vector2d(-36,58.5), Math.PI)
+                .waitSeconds(1)
+                .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
+                .strafeTo(new Vector2d(-8, 35))
+                .waitSeconds(1)
+                .strafeToLinearHeading(new Vector2d(-36,58.5), Math.PI)
+                .waitSeconds(1)
+                .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
+                .strafeTo(new Vector2d(-8, 35))
+                .waitSeconds(1)
+                .strafeToLinearHeading(new Vector2d(-36,58.5), Math.PI)
+                .waitSeconds(1)
+                .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
+                .strafeTo(new Vector2d(-8, 35))
+                .waitSeconds(1)
+                .strafeToLinearHeading(new Vector2d(-36,58.5), Math.PI)
+                .build());
+                /*.afterDisp(0,Block)
                 .strafeTo(new Vector2d(-6,35))
                 .strafeTo(new Vector2d(-36, 35))
                 .strafeTo(new Vector2d(-36, 12))
@@ -37,10 +66,20 @@ public class MyClass {
                 .strafeTo(new Vector2d(-48, 12))
                 .strafeTo(new Vector2d(-57, 12))
                 .strafeTo(new Vector2d(-57, 60))
-                .strafeTo(new Vector2d(-57, 12))
-                .strafeTo(new Vector2d(-65, 12))
-                .strafeTo(new Vector2d(-65, 60))
-                .build());
+                .strafeTo(new Vector2d(-35, 50))
+                .turn(Math.toRadians(180))
+                .turn(Math.toRadians(-180))
+                .strafeTo(new Vector2d(-8, 35))
+                .strafeTo(new Vector2d(-35, 50))
+                .turn(Math.toRadians(180))
+                .turn(Math.toRadians(-180))
+                .strafeTo(new Vector2d(-8, 35))
+                .strafeTo(new Vector2d(-35, 50))
+                .turn(Math.toRadians(180))
+                .turn(Math.toRadians(-180))
+                .strafeTo(new Vector2d(-8, 35))
+                .strafeTo(new Vector2d(-35, 50))
+                .build()); */
 
         meepMeep.setBackground(MeepMeep.Background.FIELD_INTO_THE_DEEP_OFFICIAL)
                 .setDarkMode(true)

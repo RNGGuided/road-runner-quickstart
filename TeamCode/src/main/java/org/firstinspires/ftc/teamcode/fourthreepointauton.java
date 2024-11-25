@@ -24,8 +24,8 @@ import com.acmerobotics.roadrunner.SequentialAction;
 
 import java.util.Arrays;
 
-@Autonomous(name = "LeftSide Auton 1st comp")
-public class MainAutoMode extends LinearOpMode {
+@Autonomous(name = "RightSide2")
+public class fourthreepointauton extends LinearOpMode {
 
     private Slides slides; // Declare slides
     private Arm arm;
@@ -48,22 +48,21 @@ public class MainAutoMode extends LinearOpMode {
         );
 
         Action Pick = new SequentialAction(
-                new SleepAction(.5),
                 arm.moveToPositionActionArm(1,1),
                 new SleepAction(2),
                 slides.moveSlidesToHeightAction(17, .75),
-                new SleepAction(.5),
+                new SleepAction(1),
                 claw.setPositionActionClaw(1),
-                new SleepAction(.2),
+                new SleepAction(1),
                 arm.moveToPositionActionArm(.5,.5),
                 slides.moveSlidesToHeightAction(49, 1),
-                new SleepAction(2),
+                new SleepAction(.5),
                 claw.setPositionActionClaw(0)
         );
         Action Pick2 = new SequentialAction(
                 slides.moveSlidesToHeightAction(17, .75),
                 arm.moveToPositionActionArm(1,1),
-                new SleepAction(.7),
+                new SleepAction(3),
                 slides.moveSlidesToHeightAction(17, .75),
                 claw.setPositionActionClaw(1),
                 new SleepAction(1),
@@ -71,26 +70,12 @@ public class MainAutoMode extends LinearOpMode {
                 slides.moveSlidesToHeightAction(49, 1),
                 new SleepAction(3),
                 claw.setPositionActionClaw(0),
-                new SleepAction(1),
                 arm.moveToPositionActionArm(0,0)
         );
-        Action Pick3 = new SequentialAction(
-                slides.moveSlidesToHeightAction(17, .75),
-                arm.moveToPositionActionArm(1,1),
-                new SleepAction(.7),
-                slides.moveSlidesToHeightAction(17, .75),
-                claw.setPositionActionClaw(1),
-                new SleepAction(1),
-                arm.moveToPositionActionArm(.5,.5),
-                slides.moveSlidesToHeightAction(49, 1),
-                new SleepAction(3),
-                claw.setPositionActionClaw(0),
-                new SleepAction(1),
-                arm.moveToPositionActionArm(0,0));
         Action Block1 = new SequentialAction(
                 new ParallelAction (
-                        arm.moveToPositionActionArm(.5,.5),
-                        slides.moveSlidesToHeightAction(24,1)),
+                arm.moveToPositionActionArm(.5,.5),
+                slides.moveSlidesToHeightAction(24,1)),
                 new SleepAction(.5) ,
                 claw.setPositionActionClaw(0)
 
@@ -107,9 +92,9 @@ public class MainAutoMode extends LinearOpMode {
                         arm.moveToPositionActionArm(1,1),
                         new SleepAction(3),
                         slides.moveSlidesToHeightAction(17, .75)),
-                new SleepAction(.3),
-                claw.setPositionActionClaw(1)
-        );
+                        new SleepAction(.3),
+                        claw.setPositionActionClaw(1)
+                );
         Action PickUp3 = new SequentialAction(
                 new ParallelAction(
                         arm.moveToPositionActionArm(1,1),
@@ -123,7 +108,7 @@ public class MainAutoMode extends LinearOpMode {
                 new ParallelAction(
                         arm.moveToPositionActionArm(1,1),
                         slides.moveSlidesToHeightAction(20, 1)),
-                new SleepAction(.5),
+                new SleepAction(1),
                 claw.setPositionActionClaw(1)
         );
         Action slideTask = slides.moveSlidesToHeightAction(17, 1 );
@@ -145,32 +130,48 @@ public class MainAutoMode extends LinearOpMode {
         // .turn((Math.toRadians(-135)))
         // .strafeTo(new Vector2d(12.5, 34))
 
-        Pose2d initialPose = new Pose2d(8.5, 61.5, Math.toRadians(270));
-        // Pose2d initialPose = new Pose2d(-12, 60, Math.toRadians(270));
+        //Pose2d initialPose = new Pose2d(9, 61.5, Math.toRadians(270));
+        Pose2d initialPose = new Pose2d(-15.15, 60, Math.toRadians(270));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
 
         // Initialize slides
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(6, 35))// (37, 63) -> (6, 32)
+                .afterDisp(0, Block1Alt)
+                .strafeTo(new Vector2d(-9,35))
+                .waitSeconds(1.3)
+                .strafeTo(new Vector2d(-6,45))
+                .splineToLinearHeading(new Pose2d(-35,36,Math.toRadians(180)), Math.toRadians(180))
+                .strafeToLinearHeading(new Vector2d(-38, 12), Math.PI)
+                .splineToConstantHeading(new Vector2d(-38, 12), Math.PI)
+                .strafeTo(new Vector2d(-48, 12))
+                .strafeTo(new Vector2d(-48, 60))
+                .strafeTo(new Vector2d(-48, 12))
+                .strafeTo(new Vector2d(-57, 12))
+                .strafeTo(new Vector2d(-57, 55))
+                .strafeTo(new Vector2d(-57,50))
+                .afterDisp(0, PickUp)
+                .strafeToLinearHeading(new Vector2d(-36,50), 5 * Math.PI/ 2)
+                .waitSeconds(3)
+                .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
+                .afterDisp(2, Block1Alt)
+                .strafeTo(new Vector2d(-8, 35))
                 .waitSeconds(1)
-                .strafeTo(new Vector2d(6, 39))// (30, 63) -> (6, 39)
-                .strafeTo(new Vector2d(48.2, 44))// (24, 30) -> (39, 45)
-                .waitSeconds(4)
-                .strafeToLinearHeading(new Vector2d(51, 56), 5*Math.PI/18)
-                .waitSeconds(1.5)
-                .strafeToLinearHeading(new Vector2d(56.85, 44),  Math.toRadians(260))
-                .waitSeconds(4.5)
-                .strafeTo(new Vector2d(53, 44))
-                .strafeToLinearHeading(new Vector2d(48.5, 54), 5*Math.PI/18)
-                .strafeTo(new Vector2d(51,56))
-                .waitSeconds(2)
-                .strafeToLinearHeading(new Vector2d(56.85, 44),  Math.toRadians(300))
-                .waitSeconds(4.5)
-                .strafeToLinearHeading(new Vector2d(51, 56), 5*Math.PI/18)
-                .waitSeconds(2)
-                .strafeTo(new Vector2d(30, 10));
-
+                .afterDisp(10, PickUp)
+                .strafeToLinearHeading(new Vector2d(-35,50), Math.PI/2)
+                .waitSeconds(1)
+                .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
+                .afterDisp(0, Block1Alt)
+                .strafeTo(new Vector2d(-8, 35))
+                .waitSeconds(1)
+                .afterDisp(0, PickUp)
+                .strafeToLinearHeading(new Vector2d(-36.5,50), Math.PI/2)
+                .waitSeconds(1)
+                .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
+                .afterDisp(0, Block1Alt)
+                .strafeTo(new Vector2d(-8, 35))
+                .waitSeconds(1)
+                .strafeTo(new Vector2d(-35, 50));
 
         // .strafeTo(new Vector2d(-36, 60))
         // .strafeTo(new Vector2d(-36, 12))
@@ -190,17 +191,7 @@ public class MainAutoMode extends LinearOpMode {
                 new SequentialAction(
                         // Parallel action: Execute the trajectory and slide/arm preparation
                         new ParallelAction(
-                                tab1.build(),
-                                new SequentialAction(
-                                        Block1Alt,
-                                        new SleepAction(1),
-                                        Pick,
-                                        new SleepAction(3.5),
-                                        Pick2,
-                                        new SleepAction(2),
-                                        Pick3
-
-                                )
+                                tab1.build()
                         )
                 )
         );
