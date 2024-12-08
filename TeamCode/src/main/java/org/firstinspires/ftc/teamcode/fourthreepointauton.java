@@ -111,6 +111,25 @@ public class fourthreepointauton extends LinearOpMode {
                 new SleepAction(1),
                 claw.setPositionActionClaw(1)
         );
+        Action ArmTask3 = arm.moveToPositionActionArm(1,1);
+
+        Action Everything = new SequentialAction(
+                Block1Alt,
+                new SleepAction(1),
+                ArmTask3,
+                new SleepAction(3),
+                PickUp,
+                new SleepAction(1),
+                Block1Alt,
+                new SleepAction(1),
+                PickUp,
+                new SleepAction(1),
+                Block1Alt,
+                new SleepAction(1),
+                PickUp,
+                new SleepAction(1),
+                Block1Alt
+        );
         Action slideTask = slides.moveSlidesToHeightAction(17, 1 );
         Action slideTask1 = slides.moveSlidesToHeightAction(22, .75 );
         Action slideTask2 = slides.moveSlidesToHeightAction(27.5, 1 );
@@ -118,7 +137,6 @@ public class fourthreepointauton extends LinearOpMode {
         Action slideTask4 = slides.moveSlidesToHeightAction(4000, 1 );
         Action ArmTask1 = arm.moveToPositionActionArm(0,0);
         Action ArmTask2 = arm.moveToPositionActionArm(.5,.5);
-        Action ArmTask3 = arm.moveToPositionActionArm(1,1);
         Action ClawOpen = claw.setPositionActionClaw(0);
         Action ClawClose = claw.setPositionActionClaw(1);
         // myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(9, 60, Math.toRadians(90)))
@@ -137,7 +155,6 @@ public class fourthreepointauton extends LinearOpMode {
         // Initialize slides
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .afterDisp(0, Block1Alt)
                 .strafeTo(new Vector2d(-9,35))
                 .waitSeconds(1.3)
                 .strafeTo(new Vector2d(-6,45))
@@ -150,25 +167,19 @@ public class fourthreepointauton extends LinearOpMode {
                 .strafeTo(new Vector2d(-57, 12))
                 .strafeTo(new Vector2d(-57, 55))
                 .strafeTo(new Vector2d(-57,50))
-                .afterDisp(0, PickUp)
                 .strafeToLinearHeading(new Vector2d(-36,50), 5 * Math.PI/ 2)
                 .waitSeconds(3)
                 .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
-                .afterDisp(2, Block1Alt)
                 .strafeTo(new Vector2d(-8, 35))
                 .waitSeconds(1)
-                .afterDisp(10, PickUp)
                 .strafeToLinearHeading(new Vector2d(-35,50), Math.PI/2)
                 .waitSeconds(1)
                 .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
-                .afterDisp(0, Block1Alt)
                 .strafeTo(new Vector2d(-8, 35))
                 .waitSeconds(1)
-                .afterDisp(0, PickUp)
                 .strafeToLinearHeading(new Vector2d(-36.5,50), Math.PI/2)
                 .waitSeconds(1)
                 .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
-                .afterDisp(0, Block1Alt)
                 .strafeTo(new Vector2d(-8, 35))
                 .waitSeconds(1)
                 .strafeTo(new Vector2d(-35, 50));
@@ -191,7 +202,27 @@ public class fourthreepointauton extends LinearOpMode {
                 new SequentialAction(
                         // Parallel action: Execute the trajectory and slide/arm preparation
                         new ParallelAction(
-                                tab1.build()
+                                tab1.build(),
+                                new SequentialAction(
+                                        Block1Alt,
+                                        new SleepAction(1),
+                                        ArmTask3,
+                                        new SleepAction(3),
+                                        PickUp,
+                                        new SleepAction(1),
+                                        Block1Alt,
+                                        new SleepAction(1),
+                                        PickUp,
+                                        new SleepAction(1),
+                                        Block1Alt,
+                                        new SleepAction(1),
+                                        PickUp,
+                                        new SleepAction(1),
+                                        Block1Alt
+
+
+
+                                )
                         )
                 )
         );

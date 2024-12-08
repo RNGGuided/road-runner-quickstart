@@ -8,6 +8,7 @@ import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
+import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 
@@ -36,16 +37,6 @@ public class MainAutoMode extends LinearOpMode {
         arm = new Arm(hardwareMap);
         slides = new Slides(hardwareMap);
         claw = new Claw(hardwareMap);
-        Action Block = new SequentialAction(
-                claw.setPositionActionClaw(1),
-                slides.moveSlidesToHeightAction(27.5, 1),
-                arm.moveToPositionActionArm(.5,.5),
-                new SleepAction(.5),
-                slides.moveSlidesToHeightAction(22, .75),
-                new SleepAction(.5),
-                claw.setPositionActionClaw(0),
-                slides.moveSlidesToHeightAction(24, .75)
-        );
 
         Action Pick = new SequentialAction(
                 new SleepAction(.5),
@@ -54,15 +45,16 @@ public class MainAutoMode extends LinearOpMode {
                 slides.moveSlidesToHeightAction(17, .75),
                 new SleepAction(.5),
                 claw.setPositionActionClaw(1),
-                new SleepAction(.2),
+                new SleepAction(.4),
                 arm.moveToPositionActionArm(.5,.5),
                 slides.moveSlidesToHeightAction(49, 1),
-                new SleepAction(2),
+                new SleepAction(1.4),
                 claw.setPositionActionClaw(0)
         );
         Action Pick2 = new SequentialAction(
+                new ParallelAction(
                 slides.moveSlidesToHeightAction(17, .75),
-                arm.moveToPositionActionArm(1,1),
+                arm.moveToPositionActionArm(1,1)),
                 new SleepAction(.7),
                 slides.moveSlidesToHeightAction(17, .75),
                 claw.setPositionActionClaw(1),
@@ -87,14 +79,7 @@ public class MainAutoMode extends LinearOpMode {
                 claw.setPositionActionClaw(0),
                 new SleepAction(1),
                 arm.moveToPositionActionArm(0,0));
-        Action Block1 = new SequentialAction(
-                new ParallelAction (
-                        arm.moveToPositionActionArm(.5,.5),
-                        slides.moveSlidesToHeightAction(24,1)),
-                new SleepAction(.5) ,
-                claw.setPositionActionClaw(0)
 
-        );
         Action Block1Alt = new SequentialAction( new ParallelAction (
                 arm.moveToPositionActionArm(.5,.5),
                 slides.moveSlidesToHeightAction(27.5,1)),
@@ -102,68 +87,42 @@ public class MainAutoMode extends LinearOpMode {
                 slides.moveSlidesToHeightAction(22.5,1),
                 new SleepAction(.2),
                 claw.setPositionActionClaw(0));
-        Action PickUp = new SequentialAction(
-                new ParallelAction(
-                        arm.moveToPositionActionArm(1,1),
-                        new SleepAction(3),
-                        slides.moveSlidesToHeightAction(17, .75)),
-                new SleepAction(.3),
-                claw.setPositionActionClaw(1)
-        );
-        Action PickUp3 = new SequentialAction(
-                new ParallelAction(
-                        arm.moveToPositionActionArm(1,1),
-                        new SleepAction(1),
-                        slides.moveSlidesToHeightAction(17, 1)),
-                new SleepAction(.5),
-                claw.setPositionActionClaw(1)
-        );
+        Action Everything = new SequentialAction(
+                Block1Alt,
+                new SleepAction(1),
+                Pick,
+                new SleepAction(2.5),
+                Pick2,
+                new SleepAction(2),
+                Pick3
 
-        Action PickUp2 = new SequentialAction(
-                new ParallelAction(
-                        arm.moveToPositionActionArm(1,1),
-                        slides.moveSlidesToHeightAction(20, 1)),
-                new SleepAction(.5),
-                claw.setPositionActionClaw(1)
         );
         Action slideTask = slides.moveSlidesToHeightAction(17, 1 );
         Action slideTask1 = slides.moveSlidesToHeightAction(22, .75 );
         Action slideTask2 = slides.moveSlidesToHeightAction(27.5, 1 );
         Action slideTask3 = slides.moveSlidesToHeightAction(45, 1 );
-        Action slideTask4 = slides.moveSlidesToHeightAction(4000, 1 );
         Action ArmTask1 = arm.moveToPositionActionArm(0,0);
         Action ArmTask2 = arm.moveToPositionActionArm(.5,.5);
         Action ArmTask3 = arm.moveToPositionActionArm(1,1);
-        Action ClawOpen = claw.setPositionActionClaw(0);
         Action ClawClose = claw.setPositionActionClaw(1);
-        // myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(9, 60, Math.toRadians(90)))
-        // .strafeTo(new Vector2d(37, 63))
-        // .strafeTo(new Vector2d(30, 63))
-        // .strafeTo(new Vector2d(24, 30))
-        // .turn((Math.toRadians(140)))
-        // .strafeTo(new Vector2d(17.8, 14.5))
-        // .turn((Math.toRadians(-135)))
-        // .strafeTo(new Vector2d(12.5, 34))
 
         Pose2d initialPose = new Pose2d(8.5, 61.5, Math.toRadians(270));
-        // Pose2d initialPose = new Pose2d(-12, 60, Math.toRadians(270));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
 
-        // Initialize slides
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(6, 35))// (37, 63) -> (6, 32)
                 .waitSeconds(1)
                 .strafeTo(new Vector2d(6, 39))// (30, 63) -> (6, 39)
-                .strafeTo(new Vector2d(48.2, 44))// (24, 30) -> (39, 45)
-                .waitSeconds(4)
+                .strafeTo(new Vector2d(48, 44))
+                .waitSeconds(4.3)
                 .strafeToLinearHeading(new Vector2d(51, 56), 5*Math.PI/18)
                 .waitSeconds(1.5)
-                .strafeToLinearHeading(new Vector2d(56.85, 44),  Math.toRadians(260))
-                .waitSeconds(4.5)
+                .strafeToLinearHeading(new Vector2d(56.85, 44),  Math.toRadians(265))
+                .waitSeconds(5)
                 .strafeTo(new Vector2d(53, 44))
-                .strafeToLinearHeading(new Vector2d(48.5, 54), 5*Math.PI/18)
-                .strafeTo(new Vector2d(51,56))
+                .waitSeconds(1)
+                .strafeToLinearHeading(new Vector2d(51, 56), 5*Math.PI/18)
                 .waitSeconds(2)
                 .strafeToLinearHeading(new Vector2d(56.85, 44),  Math.toRadians(300))
                 .waitSeconds(4.5)
@@ -172,37 +131,16 @@ public class MainAutoMode extends LinearOpMode {
                 .strafeTo(new Vector2d(30, 10));
 
 
-        // .strafeTo(new Vector2d(-36, 60))
-        // .strafeTo(new Vector2d(-36, 12))
-        // .strafeTo(new Vector2d(-48, 12))
-        // .strafeTo(new Vector2d(-48, 60))
-        // .strafeTo(new Vector2d(-48, 12))
-        // .strafeTo(new Vector2d(-57, 12))
-        // .strafeTo(new Vector2d(-57, 60))
-        // .strafeTo(new Vector2d(-57, 12))
-        // .strafeTo(new Vector2d(-60, 12))
-        // .strafeTo(new Vector2d(-60, 60));
-
         waitForStart();
-        Actions.runBlocking(ClawClose);
 
         Actions.runBlocking(
                 new SequentialAction(
-                        // Parallel action: Execute the trajectory and slide/arm preparation
+                        ClawClose,
                         new ParallelAction(
                                 tab1.build(),
-                                new SequentialAction(
-                                        Block1Alt,
-                                        new SleepAction(1),
-                                        Pick,
-                                        new SleepAction(3.5),
-                                        Pick2,
-                                        new SleepAction(2),
-                                        Pick3
-
+                                Everything
                                 )
                         )
-                )
         );
 
 
