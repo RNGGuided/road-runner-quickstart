@@ -5,9 +5,11 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
+import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 
@@ -111,6 +113,14 @@ public class fourthreepointauton extends LinearOpMode {
                 new SleepAction(1),
                 claw.setPositionActionClaw(1)
         );
+
+        Action PickBlockSpec = new SequentialAction(
+                new SleepAction(.5),
+                arm.moveToPositionActionArm(1,1),
+
+                slides.moveSlidesToHeightAction(17, 1),
+                claw.setPositionActionClaw(1)
+        );
         Action ArmTask3 = arm.moveToPositionActionArm(1,1);
 
         Action Everything = new SequentialAction(
@@ -155,6 +165,7 @@ public class fourthreepointauton extends LinearOpMode {
         // Initialize slides
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
+                .afterDisp(0,Block1Alt)
                 .strafeTo(new Vector2d(-9,35))
                 .waitSeconds(1.3)
                 .strafeTo(new Vector2d(-6,45))
@@ -162,22 +173,22 @@ public class fourthreepointauton extends LinearOpMode {
                 .strafeToLinearHeading(new Vector2d(-38, 12), Math.PI)
                 .splineToConstantHeading(new Vector2d(-38, 12), Math.PI)
                 .strafeTo(new Vector2d(-48, 12))
-                .strafeTo(new Vector2d(-48, 60))
+                .strafeTo(new Vector2d(-48, 60), new TranslationalVelConstraint(40.0), new ProfileAccelConstraint(-10.0, 30))
                 .strafeTo(new Vector2d(-48, 12))
+                .splineToLinearHeading(new Pose2d(-57,12,Math.toRadians(180)), Math.toRadians(180))
                 .strafeTo(new Vector2d(-57, 12))
                 .strafeTo(new Vector2d(-57, 55))
                 .strafeTo(new Vector2d(-57,50))
-                .strafeToLinearHeading(new Vector2d(-36,50), 5 * Math.PI/ 2)
+                .afterDisp(15,PickBlockSpec)
+                .strafeToLinearHeading(new Vector2d(-29,57), Math.PI)
                 .waitSeconds(3)
-                .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
-                .strafeTo(new Vector2d(-8, 35))
+                .splineToLinearHeading(new Pose2d(-8,34,3*Math.PI/2),3*Math.PI/2)
                 .waitSeconds(1)
-                .strafeToLinearHeading(new Vector2d(-35,50), Math.PI/2)
+                .strafeToLinearHeading(new Vector2d(-33,57), Math.PI)
                 .waitSeconds(1)
-                .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
-                .strafeTo(new Vector2d(-8, 35))
+                .splineToLinearHeading(new Pose2d(-8,34,3*Math.PI/2),3*Math.PI/2)
                 .waitSeconds(1)
-                .strafeToLinearHeading(new Vector2d(-36.5,50), Math.PI/2)
+                .strafeToLinearHeading(new Vector2d(-33,57), Math.PI)
                 .waitSeconds(1)
                 .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
                 .strafeTo(new Vector2d(-8, 35))
@@ -202,29 +213,12 @@ public class fourthreepointauton extends LinearOpMode {
                 new SequentialAction(
                         // Parallel action: Execute the trajectory and slide/arm preparation
                         new ParallelAction(
-                                tab1.build(),
-                                new SequentialAction(
-                                        Block1Alt,
-                                        new SleepAction(1),
-                                        ArmTask3,
-                                        new SleepAction(3),
-                                        PickUp,
-                                        new SleepAction(1),
-                                        Block1Alt,
-                                        new SleepAction(1),
-                                        PickUp,
-                                        new SleepAction(1),
-                                        Block1Alt,
-                                        new SleepAction(1),
-                                        PickUp,
-                                        new SleepAction(1),
-                                        Block1Alt
+                                tab1.build()
 
 
 
                                 )
                         )
-                )
         );
 
 

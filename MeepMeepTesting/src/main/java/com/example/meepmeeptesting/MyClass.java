@@ -1,6 +1,8 @@
 package com.example.meepmeeptesting;
 
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.ProfileAccelConstraint;
+import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.noahbres.meepmeep.MeepMeep;
 import com.noahbres.meepmeep.roadrunner.DefaultBotBuilder;
@@ -8,11 +10,11 @@ import com.noahbres.meepmeep.roadrunner.entity.RoadRunnerBotEntity;
 
 public class MyClass {
     public static void main(String[] args) {
-        MeepMeep meepMeep = new MeepMeep(800);
+        MeepMeep meepMeep = new MeepMeep(700);
 
         RoadRunnerBotEntity myBot = new DefaultBotBuilder(meepMeep)
                 // Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
-                .setConstraints(100, 100, Math.toRadians(180), Math.toRadians(180), 15)
+                .setConstraints(60, 50, Math.toRadians(180), Math.toRadians(180), 15)
                 .build();
 
         /*myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(9, 61.5, Math.toRadians(270)))
@@ -32,18 +34,19 @@ public class MyClass {
                 .strafeTo(new Vector2d(-6,35))
                 .waitSeconds(1)
                 .strafeTo(new Vector2d(-6,45))
-                .splineToLinearHeading(new Pose2d(-35,36,Math.toRadians(180)), Math.toRadians(180))
-                .strafeToLinearHeading(new Vector2d(-38, 12), Math.PI)
-                .splineToConstantHeading(new Vector2d(-38, 12), Math.PI)
+                .splineToLinearHeading(new Pose2d(-33,36,Math.toRadians(180)), Math.toRadians(180))
+                .splineToLinearHeading(new Pose2d(-38,12,Math.toRadians(180)), Math.toRadians(180))
+                .splineToLinearHeading(new Pose2d(-46,12,Math.toRadians(180)), Math.toRadians(180))
                 .strafeTo(new Vector2d(-46, 12))
-                .strafeTo(new Vector2d(-46, 60))
+                .strafeTo(new Vector2d(-46, 60), new TranslationalVelConstraint(60.0), new ProfileAccelConstraint(-60, 60))
                 .strafeTo(new Vector2d(-46, 12))
-                .strafeTo(new Vector2d(-57, 12))
+                .splineToLinearHeading(new Pose2d(-57,12,Math.toRadians(180)), Math.toRadians(180))
                 .strafeTo(new Vector2d(-57, 60))
+                .strafeTo(new Vector2d(-35,56))
+                .strafeTo(new Vector2d(-36,61))
                 .strafeToLinearHeading(new Vector2d(-36,58.5), Math.PI)
                 .waitSeconds(1)
-                .strafeToLinearHeading(new Vector2d(-8,50), 3*Math.PI/2)
-                .strafeTo(new Vector2d(-8, 35))
+                .splineToLinearHeading(new Pose2d(-8,35,3*Math.PI/2),3*Math.PI/2)
                 .waitSeconds(1)
                 .strafeToLinearHeading(new Vector2d(-36,58.5), Math.PI)
                 .waitSeconds(1)

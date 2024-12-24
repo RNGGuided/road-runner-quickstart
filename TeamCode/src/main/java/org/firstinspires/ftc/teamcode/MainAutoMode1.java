@@ -52,11 +52,8 @@ public class MainAutoMode1 extends LinearOpMode {
                 slides.moveSlidesToHeightAction(49, 1)
         );
         Action Pick2 = new SequentialAction(
-                new ParallelAction(
-                        slides.moveSlidesToHeightAction(17, .75),
-                        arm.moveToPositionActionArm(1,1)),
-                new SleepAction(.3),//changing time here from .7 to .3 11/27/2024
-                slides.moveSlidesToHeightAction(17, .75),
+                arm.moveToPositionActionArm(1,1),
+                slides.moveSlidesToHeightAction(17, 1),//changing time here from .7 to .3 11/27/2024
                 claw.setPositionActionClaw(1),
                 new SleepAction(1),
                 arm.moveToPositionActionArm(.5,.5),
@@ -65,26 +62,25 @@ public class MainAutoMode1 extends LinearOpMode {
                 claw.setPositionActionClaw(0)
         );
         Action Pick3 = new SequentialAction(
+                new SleepAction(.4),
                 arm.moveToPositionActionArm(1,1),
                 slides.moveSlidesToHeightAction(17, 1),
-                new SleepAction(.7),
-                slides.moveSlidesToHeightAction(17, .75),
                 claw.setPositionActionClaw(1),
-                new SleepAction(1),
+                new SleepAction(.5),
                 arm.moveToPositionActionArm(.5,.5),
-                slides.moveSlidesToHeightAction(49, 1),
-                new SleepAction(3),
+                slides.moveSlidesToHeightAction(49, 1));
+        Action MoveBackArm= new SequentialAction(
                 claw.setPositionActionClaw(0),
-                new SleepAction(1),
+                new SleepAction(.1),
                 arm.moveToPositionActionArm(0,0));
-
         Action Block1Alt = new SequentialAction( new ParallelAction (
                 arm.moveToPositionActionArm(.5,.5),
                 slides.moveSlidesToHeightAction(27.5,1)),
                 new SleepAction(.2),
-                slides.moveSlidesToHeightAction(22.5,1),
+                slides.moveSlidesToHeightAction(21.5,1),
                 new SleepAction(.2),
-                claw.setPositionActionClaw(0));
+                claw.setPositionActionClaw(0)
+        );
         Action Everything = new SequentialAction(
                 Block1Alt,
                 new SleepAction(1),
@@ -120,21 +116,19 @@ public class MainAutoMode1 extends LinearOpMode {
                 .waitSeconds(3.5) //Changed from 4.3 to 3.5 11/29/2024
                 .afterTime(1,ClawOpen)
                 .strafeToLinearHeading(new Vector2d(52, 56), 5*Math.PI/18, new TranslationalVelConstraint(40.0), new ProfileAccelConstraint(-10.0, 30))
-                .waitSeconds(1.5)
-                .afterDisp(5, Pick2)
-                .strafeToLinearHeading(new Vector2d(58.3, 43),  Math.toRadians(267))
-                .waitSeconds(4)
-                .strafeTo(new Vector2d(53, 44))
                 .waitSeconds(1)
+                .afterDisp(5, Pick2)
+                .strafeToLinearHeading(new Vector2d(58.5, 44),  Math.toRadians(268))
+                .waitSeconds(5.3)
                 .strafeToLinearHeading(new Vector2d(51.7, 56), 5*Math.PI/18)
-                .waitSeconds(2)
+                .waitSeconds(1)
                 .afterDisp(0, Pick3)
-                .strafeToLinearHeading(new Vector2d(57.5, 42),  Math.toRadians(305))
-                .waitSeconds(4.5)
+                .strafeToLinearHeading(new Vector2d(58.2, 41.1),  Math.toRadians(308))
+                .waitSeconds(5)
+                .afterDisp(10,MoveBackArm)
                 .strafeToLinearHeading(new Vector2d(51, 56), 5*Math.PI/18)
-                .waitSeconds(2)
-                .strafeTo(new Vector2d(30, 10));
-
+                .waitSeconds(.5)
+                .strafeToLinearHeading(new Vector2d(25,5),Math.PI);
 
         waitForStart();
 

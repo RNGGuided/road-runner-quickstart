@@ -37,12 +37,17 @@ public class Slides {
     }
 
     // Convert encoder ticks to inches
+    // Convert encoder ticks to inches
     private double ticksToInches(int ticks) {
-        if (ticks < MIN_TICKS || ticks > MAX_TICKS) {
+        // Allow a small buffer range below MIN_TICKS
+        if (ticks < MIN_TICKS - 10 || ticks > MAX_TICKS) {
             throw new IllegalArgumentException("Ticks out of range: " + ticks);
         }
-        return MIN_HEIGHT + ((double) (ticks - MIN_TICKS) / (MAX_TICKS - MIN_TICKS)) * (MAX_HEIGHT - MIN_HEIGHT);
+        // Clamp ticks to MIN_TICKS if within the allowed buffer range
+        int clampedTicks = Math.max(ticks, MIN_TICKS);
+        return MIN_HEIGHT + ((double) (clampedTicks - MIN_TICKS) / (MAX_TICKS - MIN_TICKS)) * (MAX_HEIGHT - MIN_HEIGHT);
     }
+
 
     // Action to move slides to a specific height in inches
     public Action moveSlidesToHeightAction(double targetHeight, double power) {
