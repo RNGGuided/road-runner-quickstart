@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 // RR-specific imports
+
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
@@ -35,11 +36,12 @@ public class REDFRONT extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         ShooterSystem shooter = new ShooterSystem(hardwareMap);
-        ShooterActions SA = new ShooterActions(shooter);
+        int[] spindexerBalls = new int[3];  // 0 = empty, 1 = green, 2 = purple
+        ShooterActions SA = new ShooterActions(shooter, spindexerBalls);
+
 
         Action S= new SequentialAction(
                 SA.feedFull(.25),
-                SA.spinUp(.55),
                 SA.kickerDown(),
                 SA.kickerUp(),
                 SA.indexNextAngle(1.5),
@@ -50,7 +52,6 @@ public class REDFRONT extends LinearOpMode {
                 new SleepAction(2.0),
                 SA.kickerDown(),
                 SA.kickerUp()
-
         );
 
 

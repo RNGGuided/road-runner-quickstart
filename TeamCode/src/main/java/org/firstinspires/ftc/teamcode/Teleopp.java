@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-
+import org.firstinspires.ftc.teamcode.ShooterSystem;
 
 
 @TeleOp(name = "Simple Mecanum Drive with Shooter", group = "TeleOp")
@@ -19,6 +19,13 @@ public class Teleopp extends LinearOpMode {
 
 
     AnalogInput analogEncoder, servoEncoder;
+
+
+    public int[] spindexerBalls = new int[3]; // 1 = green, 2 = purple
+    private int spindexerBallIndex = -1, ballAmount = 0;
+    long kickerTimer = 0;
+
+
 
 
 
@@ -40,40 +47,38 @@ public class Teleopp extends LinearOpMode {
         shooterSystem = new ShooterSystem(hardwareMap);
 
 
+        ShooterSystem.DetectedColor detectedColor;
+
+
+
+
+
+
         analogEncoder = hardwareMap.get(AnalogInput.class, "MelonEncoder1");
         servoEncoder = hardwareMap.get(AnalogInput.class, "servoEncoder");
 
 
-        boolean shooter = false;
-        boolean prevX = false;
-        boolean intake = false;
-        boolean prevD_pad = false;
-        boolean shooter2 = false;
-        boolean prevA = false;
-        boolean prevD_padL = false;
-        boolean intake2 = false;
+        boolean shooter = false, prevDpad_Left = false, intake = false, prevLBumper = false, shooter2 = false, prevDpad_right = false, prevRBumper = false, intake2 = false, prevY = false, kicker = false, shootingKicker = false;
 
 
-
-
-
-
-
-
+        shooterSystem.KickerUp();
 
 
         waitForStart();
 
 
         while (opModeIsActive()) {
+            shooterSystem.updateShooterBangBang();
             shooterSystem.getOptimalAngles();
             shooterSystem.updateServo();
 
 
-            boolean currentX = gamepad1.x;
-            boolean currentD_pad = gamepad1.dpad_up;
-            boolean currentA = gamepad1.a;
-            boolean currentD_padL = gamepad1.dpad_left;
+            // --------------- Switch Machine Var --------------
+            boolean currentDpad_left = gamepad1.dpad_left;
+            boolean currentLBumper = gamepad1.left_bumper;
+            boolean currentDpad_right = gamepad1.dpad_right;
+            boolean currentRBumper = gamepad1.right_bumper;
+            boolean currentY = gamepad1.y;
             // ---------------- DRIVE ----------------
             double y = -gamepad1.left_stick_y;
             double x = gamepad1.left_stick_x;
@@ -86,8 +91,6 @@ public class Teleopp extends LinearOpMode {
             double backRightPower  = y + x - rx;
 
 
-            // ---------CR SERVO (LAZY) ----------
-            boolean currentDpadRight = gamepad1.dpad_right;
 
 
             double max = Math.max(Math.abs(frontLeftPower), Math.max(Math.abs(backLeftPower),
@@ -106,6 +109,9 @@ public class Teleopp extends LinearOpMode {
             rightRear.setPower(backRightPower);
 
 
+            //   ---------------- ANGLES ----------------
+
+
             double voltage = analogEncoder.getVoltage(); // get voltage (0V–3.3V)
             double angle = (voltage / 3.3) * 360.0;
 
@@ -116,138 +122,214 @@ public class Teleopp extends LinearOpMode {
 
 
 
+            if(shootingKicker && !shooterSystem.isSpinning() && !shooterSystem.isSpinning2())
+            {
+                shooterSystem.KickerDown();
+                shootingKicker = false;
+            }
             // ---------------- SHOOTER ----------------
-           /*
-           if (gamepad1.a) {
-               shooterSystem.shoot(0.99);  // Full power when A is pressed
-           } else {
-               shooterSystem.stopShooter(); // Stop when released
-           }
-           */
 
 
-            if (currentA && !prevA) {
+            if (currentDpad_left && !prevDpad_Left) {
                 shooter2 = !shooter2;
-                if (shooter2) shooterSystem.shoot(0.5175);
-                else shooterSystem.stopShooter();
+                if (shooter2) {
+                    shooterSystem.setShooterTargetRpm(1675);  // also 2500 or change it
+                } else {
+                    shooterSystem.stopShooterBangBang();
+                }
             }
 
-// Shooter toggle X (0.65 power)
-            if (currentX && !prevX) {
+
+
+            if (currentDpad_right && !prevDpad_right) {
                 shooter = !shooter;
-                if (shooter) shooterSystem.shoot(0.62);
-                else shooterSystem.stopShooter();
-            }
-
-// ✅ Intake Forward on RIGHT BUMPER
-            if (gamepad1.right_bumper) {
-                shooterSystem.intakeOn(1.0);
-            } else if (!gamepad1.left_bumper) { // only stop if left bumper not pressed
-                shooterSystem.intakeOff();
-            }
-
-// ✅ Intake Reverse on LEFT BUMPER
-            /*if (gamepad1.left_bumper) {
-                shooterSystem.intakeReverse(1.0);
-            } else if (!gamepad1.right_bumper) { // only stop if right bumper not pressed
-                shooterSystem.intakeOff();
-            }
-*/
-            if (gamepad1.b) {
-                shooterSystem.KickerUp();  // Pushes the kicker Up when B is pressed
-            }
-
-            if(gamepad1.y) {
-                shooterSystem.KickerDown(); // Puts them down when y is pressed
+                if (shooter) {
+                    shooterSystem.setShooterTargetRpm(2050);  // 🔥 YOUR RPM HERE
+                } else {
+                    shooterSystem.stopShooterBangBang();
+                }
             }
 
 
-            if (gamepad1.dpad_right && !shooterSystem.isSpinning()) {
-                shooterSystem.KickerUp();
-                shooterSystem.spinToNextAngle(angle);
+            // ---------------- INTAKE ----------------
+
+
+            if (currentLBumper && !prevLBumper) {
+                intake = !intake;
+                if(intake) {
+                    shooterSystem.intakeOn(1.0);
+                }
+                else {
+                    shooterSystem.intakeOff();
+                }
+            }
+
+
+            if (currentRBumper && !prevRBumper) {
+                intake2 = !intake2;
+                if(intake2) {
+                    shooterSystem.intakeReverse(1.0);
+                }
+                else {
+                    shooterSystem.intakeOff();
+                }
+            }
+
+            // ---------------- KICKER ----------------
+
+
+            if(currentY && !prevY) {
+                kicker = !kicker;
+                if(kicker) {
+                    shooterSystem.KickerDown(); // Puts them down when y is pressed
+                }
+                else {
+                    shooterSystem.KickerUp();
+                }
+            }
+
+
+            //  ---------------- SPINDEXER ----------------
+
+
+            if (gamepad1.dpad_up && !shooterSystem.isSpinning()) {
+                shooterSystem.spinToNextAngle();
             }
             shooterSystem.update();
 
 
-           /*if (gamepad1.b)
-           {
-               shooterSystem.KickerUp();
-           }
-           */
+            if (gamepad1.dpad_down && !shooterSystem.isSpinning2()) {
+                shooterSystem.spinToNextAngle2();
+            }
+            shooterSystem.update2();
 
 
-            /*if (shooterSystem.optimalSet) { // ✅ only allow spinning after angles are set
-                if (gamepad1.b && !shooterSystem.isSpinningServo()) {
-                    shooterSystem.spinToNextAngleServo(servoAngle);
+            // Shoots a Green ball (SHOOTER MUST ALREADY BE ACTIVE)
+            if(gamepad1.x && !shooterSystem.isSpinning() && !shooterSystem.isSpinning2() && ballAmount != 0 && shooterSystem.containsGreen(spindexerBalls) != -1 && shooterSystem.currentTargetIndex != -1)
+            {
+                int rotation = shooterSystem.containsGreen(spindexerBalls) - shooterSystem.currentTargetIndex;
+                if(rotation == 0)
+                {
+                    shooterSystem.KickerDown();
                 }
-            } else {
-                telemetry.addLine("⏳ Waiting for optimal angles...");
-            }*/
+                else if (rotation == -1 || rotation == 2)
+                {
+                    shooterSystem.spinToNextAngle();
+                    shootingKicker = true;
+                    kickerTimer = System.currentTimeMillis();
+                }
+                else if (rotation == 1 || rotation == -2)
+                {
+                    shooterSystem.spinToNextAngle2();
+                    shootingKicker = true;
+                    kickerTimer = System.currentTimeMillis();
+                }
 
 
+                ballAmount--;
+                spindexerBalls[shooterSystem.containsGreen(spindexerBalls)] = 0;
 
 
+            }
 
 
+            // Shoots a Purple ball (SHOOTER MUST ALREADY BE ACTIVE)
+            if(gamepad1.b && !shooterSystem.isSpinning() && !shooterSystem.isSpinning2() && ballAmount != 0 && shooterSystem.containsPurple(spindexerBalls) != -1 && shooterSystem.currentTargetIndex != -1)
+            {
+                int rotation = shooterSystem.containsPurple(spindexerBalls) - shooterSystem.currentTargetIndex;
+                if(rotation == 0)
+                {
+                    shooterSystem.KickerDown();
+                }
+                else if (rotation == -1 || rotation == 2)
+                {
+                    shooterSystem.spinToNextAngle();
+                    shootingKicker = true;
+                    kickerTimer = System.currentTimeMillis();
+                }
+                else if (rotation == 1 || rotation == -2)
+                {
+                    shooterSystem.spinToNextAngle2();
+                    shootingKicker = true;
+                    kickerTimer = System.currentTimeMillis();
+                }
 
 
-            // Continuously update servo movement
+                ballAmount--;
+                spindexerBalls[shooterSystem.currentTargetIndex] = 0;
 
 
+            }
 
 
+            //  ---------------- COLOR SENSORS ----------------
 
 
-            // When you press D-Pad Right, start spinning if not already
-           /*if (gamepad1.dpad_right && !spinning && !prevDpadRight && !cooldown) {
-               shooterSystem.controlSpindexer(); // starts spinning
-               servoTimer.reset();                // start the timer
-               spinning = true;                   // mark as spinning
-           }
+            detectedColor = shooterSystem.getDetectedColor(telemetry);
 
 
-           // Stop spinning after 2 seconds
-           if (spinning && servoTimer.seconds() > 0.33333) {
-               shooterSystem.stopSpindexer();     // stop the servo
-               spinning = false;                  // mark as stopped
-               cooldown = true;
-               cooldownTimer.reset();
+            if(detectedColor != ShooterSystem.DetectedColor.UNKNOWN && ballAmount != 3 && !shooterSystem.isSpinning2() && !shooterSystem.isSpinning())
+            {
+                spindexerBallIndex = shooterSystem.currentTargetIndex;
 
 
-           }
+                if(spindexerBallIndex == -1)
+                {
+                    spindexerBallIndex = 0;
+                }
+                if(detectedColor == ShooterSystem.DetectedColor.GREEN && spindexerBalls[spindexerBallIndex] != 1)
+                {
+                    spindexerBalls[spindexerBallIndex] = 1;
+                    ballAmount = (ballAmount + 1) % 4;
+                }
+                else if (detectedColor == ShooterSystem.DetectedColor.PURPLE && spindexerBalls[spindexerBallIndex] != 2)
+                {
+                    spindexerBalls[spindexerBallIndex] = 2;
+                    ballAmount = (ballAmount + 1) % 4;
+                }
+            }
+            // ---------------- STATE MACHINE ----------------
 
 
-           if (cooldown && cooldownTimer.seconds() > 1) {
-               cooldown = false;
-           }
-           */
+            prevDpad_Left = currentDpad_left;
+            prevLBumper = currentLBumper;
+            prevDpad_right = currentDpad_right;
+            prevRBumper = currentRBumper;
+            prevY = currentY;
 
 
-            prevX = currentX;
-            prevD_pad = currentD_pad;
-            prevA = currentA;
-            prevD_padL = currentD_padL;
             // ---------------- FEEDER SERVO ----------------
+            if (gamepad2.y) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.HYBRID);
+            if (gamepad2.x) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.PIDF);
+            if (gamepad2.b) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.BANG_BANG);
+
+
+
             shooterSystem.controlFeeder(gamepad1.right_trigger, gamepad1.left_trigger);
 
 
-            telemetry.addData("OptimalAngle1", shooterSystem.optimalAngle1);
-            telemetry.addData("OptimalAngle2", shooterSystem.optimalAngle2);
-            telemetry.addData("OptimalAngle3", shooterSystem.optimalAngle3);
-            telemetry.addData("Volts", voltage2);
-            telemetry.addData("Servo Angle", servoAngle);
-            telemetry.addData("Spindexer Angle", angle);
-            telemetry.addData("Target Servo", shooterSystem.targetAngleServo);
-            telemetry.addData("Target", shooterSystem.targetAngle);
-            telemetry.addData("Diff", (shooterSystem.targetAngle - angle + 360) % 360);
-            telemetry.addData("Spinning", shooterSystem.isSpinning());
-            telemetry.addData("Angle (deg)", angle);
-            telemetry.addData("Encoder Voltage", voltage);
-            telemetry.addData("Shooter", gamepad1.a ? "Active" : "Off");
-            telemetry.addData("Feeder Power", gamepad1.right_trigger - gamepad1.left_trigger);
-            telemetry.addData("Intake", gamepad1.dpad_up ? "Active" : "Off");
+            //   ---------------- TELEMETRY ----------------
+            telemetry.addData("Target RPM", shooterSystem.getShooterTargetRpm());
+            telemetry.addData("RPM Raw", shooterSystem.getShooterRpm());
+            telemetry.addData("Shooter Speed OK", shooterSystem.atShooterSpeed());
+            telemetry.addData("Mode", shooterSystem.shooterMode); // if you want mode display
+            telemetry.update();
+            telemetry.addData("Shooter RPM", shooterSystem.getShooterRpm());
+            telemetry.addData("ContainsPurple", shooterSystem.containsPurple(spindexerBalls));
+            telemetry.addData("spindexerBalls1", spindexerBalls[0]);
+            telemetry.addData("spindexerBalls2", spindexerBalls[1]);
+            telemetry.addData("spindexerBalls3", spindexerBalls[2]);
+            telemetry.addData("INDEX", spindexerBallIndex);
+            telemetry.addData("CURRENTTARGETINDEX", shooterSystem.currentTargetIndex);
+            telemetry.addData("Ball Amount", ballAmount);
+            telemetry.addData("Detected Color", detectedColor);
+
+
+            //telemetry.addData("Target2", shooterSystem.targetAngle2);
+            //telemetry.addData("Target", shooterSystem.targetAngle);
+            //telemetry.addData("Diff", (shooterSystem.targetAngle - angle + 360) % 360);
+            //telemetry.addData("Angle (deg)", angle);
             telemetry.update();
         }
     }
 }
-

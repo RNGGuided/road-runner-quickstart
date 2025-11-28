@@ -34,25 +34,47 @@ public class DayOfAuton extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
+        int[] spindexerBalls = new int[3];
         ShooterSystem shooter = new ShooterSystem(hardwareMap);
-        ShooterActions SA = new ShooterActions(shooter);
+        ShooterActions SA = new ShooterActions(shooter, spindexerBalls);
 
-        Action S= new SequentialAction(
-                SA.feedFull(.25),
-                SA.spinUp(.55),
+        Action S= new SequentialAction
+                (
+                        SA.setShooterMode(ShooterSystem.ShooterControlMode.HYBRID),
+                SA.spinUpRpm(1675),
+                        SA.waitUntil(() -> shooter.atShooterSpeed(), 3.0, true),
                 SA.kickerDown(),
+                        new SleepAction(0.5),
                 SA.kickerUp(),
                 SA.indexNextAngle(1.5),
-                new SleepAction(3.0),
+                        new SleepAction(0.5),
                 SA.kickerDown(),
+                        new SleepAction(0.5),
                 SA.kickerUp(),
-                SA.indexNextAngle(1.5),
-                new SleepAction(2.0),
+                SA.indexNextAngle(1.7),
+                        new SleepAction(1.0),
                 SA.kickerDown(),
+                        new SleepAction(0.5),
                 SA.kickerUp()
 
         );
-
+        Action Second = new SequentialAction (
+                SA.indexNextAngle(1.5),
+                new SleepAction(1.0),
+                SA.kickerDown(),
+                new SleepAction(0.5),
+                SA.kickerUp()
+        );
+        Action Intake = new SequentialAction(
+                SA.indexNextAngle(1),
+                SA.intakeForward(1.0),
+                new SleepAction(1.75),
+                SA.indexNextAngle(1),
+                new SleepAction(.5),
+                SA.indexNextAngle(1),
+                new SleepAction(.5),
+                SA.indexNextAngle(1)
+        );
 
         // myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(9, 60, Math.toRadians(90)))
         // .strafeTo(new Vector2d(37, 63))
@@ -64,14 +86,22 @@ public class DayOfAuton extends LinearOpMode {
         // .strafeTo(new Vector2d(12.5, 34))
 
         //Pose2d initialPose = new Pose2d(9, 61.5, Math.toRadians(270));
-        Pose2d initialPose = new Pose2d(-52.489, 51.198, Math.toRadians(135));
+        Pose2d initialPose = new Pose2d(15.06, 63.984, Math.toRadians(90));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
 
         // Initialize slides
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-12.967,11.676))
-                .waitSeconds(.75);
+                //.afterTime(0,S)
+                .strafeToLinearHeading(new Vector2d(14.543,13.355),Math.toRadians(45));
+                /*.waitSeconds(10)
+                .turnTo((Math.toRadians(0)))
+                .afterTime(0,Intake)
+                .strafeTo(new Vector2d(53.807, 11.288), new TranslationalVelConstraint(9.0))
+                .strafeToLinearHeading(new Vector2d(14.543,13.355),Math.toRadians(45))
+                .strafeToLinearHeading(new Vector2d(26.942,-13.251),Math.toRadians(0))
+                .strafeTo(new Vector2d(54.323, -13.51))
+                .strafeToLinearHeading(new Vector2d(14.543,13.355),Math.toRadians(45));
                 /*.strafeTo(new Vector2d(-6,45))
                 .splineToLinearHeading(new Pose2d(-35,36,Math.toRadians(180)), Math.toRadians(180))
                 .strafeToLinearHeading(new Vector2d(-38, 12), Math.PI)
@@ -114,14 +144,10 @@ public class DayOfAuton extends LinearOpMode {
         Actions.runBlocking(
                 new SequentialAction(
                         tab1.build(),
-                        S
-
-
-
-                        )
-                );
-
-
+                        S,
+                        Second
+                )
+        );
 
     }
 }

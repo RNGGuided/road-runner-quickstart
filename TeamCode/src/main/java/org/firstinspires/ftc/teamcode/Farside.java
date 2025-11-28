@@ -35,10 +35,11 @@ public class Farside extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         ShooterSystem shooter = new ShooterSystem(hardwareMap);
-        ShooterActions SA = new ShooterActions(shooter);
+        int[] spindexerBalls = new int[3];  // 0 = empty, 1 = green, 2 = purple
+        ShooterActions SA = new ShooterActions(shooter, spindexerBalls);
+
 
         Action S= new SequentialAction(
-                SA.spinUp(.65),
                 SA.kickerDown(),
                 SA.kickerUp(),
                 SA.indexNextAngle(1.5),

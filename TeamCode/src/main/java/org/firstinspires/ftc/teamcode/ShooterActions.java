@@ -2,221 +2,187 @@ package org.firstinspires.ftc.teamcode;
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.SleepAction;
 
 import java.util.function.BooleanSupplier;
 
-/**
- * Drop-in helper that wraps your ShooterSystem in Road Runner v1.0 Actions so you can
- * compose them inside your autonomous sequences (SequentialAction/ParallelAction).
- *
- * Usage (inside your auton):
- *
- *   ShooterSystem shooter = new ShooterSystem(hardwareMap);
- *   ShooterActions SA = new ShooterActions(shooter);
- *
- *   Action auto = new SequentialAction(
- *       SA.captureOptimalAngles(),           // optional once at start
- *       SA.spinUp(0.90),
- *       new SleepAction(1.2),                // give flywheels time
- *       new ParallelAction(
- *           path,                            // your RR path Action
- *           SA.keepUpdatingFor(99.0)         // keeps update() / updateServo() running while driving
- *       ),
- *       new SequentialAction(
- *           SA.indexNextAngle(0.8),          // CR-spindexer to next slot, wait until done or timeout
- *           SA.feedFor(0.35, +1.0),          // feed one ring forward for 0.35s
- *           SA.indexNextAngle(0.8),
- *           SA.feedFor(0.35, +1.0),
- *           SA.indexNextAngle(0.8),
- *           SA.feedFor(0.35, +1.0)
- *       ),
- *       SA.stopAll()
- *   );
- *
- *   Actions.runBlocking(auto);
- */
 public class ShooterActions {
+
     private final ShooterSystem shooter;
+    private final int[] spindexerBalls;
 
-    public ShooterActions(ShooterSystem shooter) {
+    public ShooterActions(ShooterSystem shooter, int[] spindexerBalls) {
         this.shooter = shooter;
+        this.spindexerBalls = spindexerBalls;
     }
 
-    /** Instant: call getOptimalAngles() once (it internally guards to only set once). */
-    public Action captureOptimalAngles() {
-        return new Action() {
-            @Override public boolean run(TelemetryPacket p) {
-                shooter.getOptimalAngles();
-                return false; // instant
-            }
+    // --------------------------------------------------------
+    // BALL TRACKING (color sensors)
+    // --------------------------------------------------------
+    public void updateBallTracking() {
+        ShooterSystem.DetectedColor col = shooter.getDetectedColor(null);
+        if (col == ShooterSystem.DetectedColor.UNKNOWN) return;
+
+        int index = shooter.currentTargetIndex;
+        if (index == -1) index = 0;
+
+        if (col == ShooterSystem.DetectedColor.GREEN)
+            spindexerBalls[index] = 1;
+        else if (col == ShooterSystem.DetectedColor.PURPLE)
+            spindexerBalls[index] = 2;
+    }
+
+    // --------------------------------------------------------
+    // SHOOTER MODE
+    // --------------------------------------------------------
+    public Action setShooterMode(ShooterSystem.ShooterControlMode mode) {
+        return p -> {
+            shooter.setShooterMode(mode);
+            return false;
         };
     }
 
-    /** Instant: start flywheels at power. */
-    public Action spinUp(double power) {
-        return new Action() {
-            @Override public boolean run(TelemetryPacket p) {
-                shooter.shoot(power);
-                return false; // instant
-            }
+    // --------------------------------------------------------
+    // SPIN SHOOTER TO RPM
+    // --------------------------------------------------------
+    public Action spinUpRpm(double rpm) {
+        return p -> {
+            shooter.setShooterTargetRpm(rpm);
+            return false;
         };
     }
 
-    /** Instant: stop everything shooter-related (flywheels + feeder off, kicker down). */
-    public Action stopAll() {
-        return new Action() {
-            @Override public boolean run(TelemetryPacket p) {
-                shooter.stopShooter();
-                shooter.controlFeeder(0, 0);
-                shooter.KickerDown();
-                shooter.intakeOff();
-                return false; // instant
-            }
+    public Action stopShooterRpm() {
+        return p -> {
+            shooter.stopShooterBangBang();
+            return false;
         };
     }
 
-    /** Instant: kicker up. */
-    public Action kickerUp() {
-        return new Action() {
-            @Override public boolean run(TelemetryPacket p) {
-                shooter.KickerUp();
-                return false;
-            }
-        };
-    }
-
-    /** Instant: kicker down. */
+    // --------------------------------------------------------
+    // KICKER ACTIONS
+    // --------------------------------------------------------
     public Action kickerDown() {
-        return new Action() {
-            @Override public boolean run(TelemetryPacket p) {
-                shooter.KickerDown();
-                return false;
-            }
+        return p -> {
+            shooter.KickerDown();
+            return false;
         };
     }
 
-    /** Feed using your trigger-style API: positive power feeds forward, negative reverse. */
-    public Action feedFor(double seconds, double forwardPower01) {
-        double fwd = Math.max(0.0, Math.min(1.0, forwardPower01));
-        // controlFeeder(rightTrigger, leftTrigger) -> forward = right - left
-        return new SequentialAction(
-                kickerUp(),
-                new Action() { // start feeder
-                    @Override public boolean run(TelemetryPacket p) {
-                        shooter.controlFeeder(fwd, 0.0);
-                        return false;
-                    }
-                },
-                new SleepAction(seconds),
-                new Action() { // stop feeder and drop kicker
-                    @Override public boolean run(TelemetryPacket p) {
-                        shooter.controlFeeder(0.0, 0.0);
-                        shooter.KickerDown();
-                        return false;
-                    }
-                }
-        );
-    }
-    public Action feedFull(double seconds) {
-        return new SequentialAction(
-                new Action() {
-                    @Override public boolean run(TelemetryPacket p) {
-                        shooter.controlFeeder(-1.0, 0.0); // full power forward
-                        return false;
-                    }
-                },
-                new SleepAction(seconds),
-                new Action() {
-                    @Override public boolean run(TelemetryPacket p) {
-                        shooter.controlFeeder(0.0, 0.0); // stop
-                        return false;
-                    }
-                }
-        );
+    public Action kickerUp() {
+        return p -> {
+            shooter.KickerUp();
+            return false;
+        };
     }
 
-    /** Intake helpers */
-    public Action intakeForward(double power01) {
-        double p = Math.max(0.0, Math.min(1.0, power01));
-        return new Action() { @Override public boolean run(TelemetryPacket pkt) { shooter.intakeOn(p); return false; } };
+    // --------------------------------------------------------
+    // INTAKE ACTIONS
+    // --------------------------------------------------------
+    public Action intakeForward(double pwr) {
+        return p -> {
+            shooter.intakeOn(pwr);
+            return false;
+        };
     }
-    public Action intakeReverse(double power01) {
-        double p = Math.max(0.0, Math.min(1.0, power01));
-        return new Action() { @Override public boolean run(TelemetryPacket pkt) { shooter.intakeReverse(p); return false; } };
+
+    public Action intakeReverse(double pwr) {
+        return p -> {
+            shooter.intakeReverse(pwr);
+            return false;
+        };
     }
+
     public Action intakeOff() {
-        return new Action() { @Override public boolean run(TelemetryPacket pkt) { shooter.intakeOff(); return false; } };
+        return p -> {
+            shooter.intakeOff();
+            return false;
+        };
     }
 
-    /**
-     * Start CR spindexer toward next pre-defined angle (CW) and wait until it finishes or timeout.
-     * Calls shooter.update() repeatedly in the wait loop.
-     */
+    // --------------------------------------------------------
+    // INDEXER (CW)
+    // --------------------------------------------------------
     public Action indexNextAngle(double timeoutSeconds) {
         return new SequentialAction(
-                new Action() {
-                    @Override public boolean run(TelemetryPacket p) {
-                        shooter.spinToNextAngle(0 /* currentAngle unused */);
-                        return false;
-                    }
-                },
+                p -> { shooter.spinToNextAngle(); return false; },
                 waitUntil(() -> !shooter.isSpinning(), timeoutSeconds, true)
         );
     }
 
-    /**
-     * Same idea, but for your servo-based indexing PID (spinToNextAngleServo / isSpinningServo).
-     */
-    public Action indexNextAngleServo(double timeoutSeconds) {
+    // --------------------------------------------------------
+    // INDEXER (CCW)
+    // --------------------------------------------------------
+    public Action indexNextAngleReverse(double timeoutSeconds) {
         return new SequentialAction(
-                new Action() {
-                    @Override public boolean run(TelemetryPacket p) {
-                        shooter.spinToNextAngleServo();
-                        return false;
-                    }
-                },
-                waitUntil(() -> !shooter.isSpinningServo(), timeoutSeconds, true)
+                p -> { shooter.spinToNextAngle2(); return false; },
+                waitUntil(() -> !shooter.isSpinning2(), timeoutSeconds, true)
         );
     }
 
-    /** Keep running update loops for a duration (handy in ParallelAction while driving). */
-    public Action keepUpdatingFor(double seconds) {
-        return new TimedUpdater(seconds);
+    // --------------------------------------------------------
+    // FEEDER (full)
+    // --------------------------------------------------------
+    public Action feedFull(double seconds) {
+        return new SequentialAction(
+                p -> { shooter.controlFeeder(-1, 0); return false; },
+                new SleepAction(seconds),
+                p -> { shooter.controlFeeder(0, 0); return false; }
+        );
     }
 
-    // --------------------- Internals / Utilities ---------------------
-
-    /** Wait for a condition (done==true) or until timeout. Optionally run update loops while waiting. */
-    public Action waitUntil(BooleanSupplier done, double timeoutSeconds, boolean runUpdates) {
+    // --------------------------------------------------------
+    // KEEP UPDATING SHOOTER + INDEXER + COLOR SENSOR
+    // --------------------------------------------------------
+    public Action keepUpdatingFor(double seconds) {
         return new Action() {
-            boolean started = false;
-            long startNs;
-            @Override public boolean run(TelemetryPacket p) {
-                if (!started) { started = true; startNs = System.nanoTime(); }
-                if (runUpdates) { shooter.update(); shooter.updateServo(); }
+            long startNs = -1;
+
+            @Override
+            public boolean run(TelemetryPacket p) {
+
+                if (startNs == -1) startNs = System.nanoTime();
+
+                shooter.update();                // CW indexer
+                shooter.update2();               // CCW indexer
+                shooter.updateServo();           // servo indexer
+                shooter.updateShooterBangBang(); // shooter control
+                updateBallTracking();            // color tracking
+
                 double t = (System.nanoTime() - startNs) / 1e9;
-                boolean timeLeft = t < timeoutSeconds;
-                boolean finished = done.getAsBoolean();
-                return !(finished || !timeLeft); // return true to KEEP running
+                return t < seconds;
             }
         };
     }
 
-    /** Repeatedly calls update() / updateServo() for a fixed duration. */
-    private class TimedUpdater implements Action {
-        private final double seconds;
-        private boolean started = false;
-        private long startNs;
-        TimedUpdater(double seconds) { this.seconds = seconds; }
-        @Override public boolean run(TelemetryPacket p) {
-            if (!started) { started = true; startNs = System.nanoTime(); }
-            shooter.update();
-            shooter.updateServo();
-            double t = (System.nanoTime() - startNs) / 1e9;
-            return t < seconds; // keep running until time elapses
-        }
+    // --------------------------------------------------------
+    // WAIT UNTIL CONDITION (while still updating shooter!)
+    // --------------------------------------------------------
+    public Action waitUntil(BooleanSupplier done, double timeoutSeconds, boolean doUpdates) {
+
+        return new Action() {
+
+            long startNs = -1;
+
+            @Override
+            public boolean run(TelemetryPacket p) {
+
+                if (startNs == -1) startNs = System.nanoTime();
+
+                if (doUpdates) {
+                    shooter.update();
+                    shooter.update2();
+                    shooter.updateServo();
+                    shooter.updateShooterBangBang();
+                    updateBallTracking();
+                }
+
+                double t = (System.nanoTime() - startNs) / 1e9;
+
+                return !(done.getAsBoolean() || t >= timeoutSeconds);
+            }
+        };
     }
 }

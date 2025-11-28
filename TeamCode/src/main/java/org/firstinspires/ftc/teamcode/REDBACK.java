@@ -35,11 +35,12 @@ public class REDBACK extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         ShooterSystem shooter = new ShooterSystem(hardwareMap);
-        ShooterActions SA = new ShooterActions(shooter);
+        int[] spindexerBalls = new int[3];  // 0 = empty, 1 = green, 2 = purple
+        ShooterActions SA = new ShooterActions(shooter, spindexerBalls);
+
 
         Action S= new SequentialAction(
                 //SA.feedFull(.55),
-                SA.spinUp(.62),
                 new SleepAction(3.7),
                 SA.kickerDown(),
                 new SleepAction(.5),
