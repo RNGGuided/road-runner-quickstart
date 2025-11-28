@@ -65,6 +65,7 @@ public class DayOfAuton extends LinearOpMode {
                 new SleepAction(0.5),
                 SA.kickerUp()
         );
+        //Action FullShot = new SeqeuentialAction()
         Action Intake = new SequentialAction(
                 SA.indexNextAngle(1),
                 SA.intakeForward(1.0),
@@ -92,7 +93,7 @@ public class DayOfAuton extends LinearOpMode {
         // Initialize slides
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                //.afterTime(0,S)
+                .afterTime(0,S)
                 .strafeToLinearHeading(new Vector2d(14.543,13.355),Math.toRadians(45));
                 /*.waitSeconds(10)
                 .turnTo((Math.toRadians(0)))
@@ -143,9 +144,8 @@ public class DayOfAuton extends LinearOpMode {
 
         Actions.runBlocking(
                 new SequentialAction(
-                        tab1.build(),
-                        S,
-                        Second
+                        SA.indexNextAngle(1.5),
+                        tab1.build()
                 )
         );
 

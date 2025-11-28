@@ -1,15 +1,13 @@
-plugins {
-    id 'java-library'
-}
-java {
-    sourceCompatibility JavaVersion.VERSION_11
-    targetCompatibility JavaVersion.VERSION_11
-}
 repositories {
     mavenCentral()
-}
+    google()
 
-dependencies {
-    implementation 'com.acmerobotics.roadrunner:core:1.0.0'
-    implementation 'com.noahbres.meepmeep:MeepMeep:2.0.0'
+    // ADD THIS — the Road Runner 1.0 repo
+    maven {
+        url = uri("https://maven.pkg.github.com/acmerobotics/road-runner")
+        credentials {
+            username = "acmerobotics"  // GitHub username not required but allowed
+            password = ""               // leave empty for read-only access
+        }
+    }
 }
