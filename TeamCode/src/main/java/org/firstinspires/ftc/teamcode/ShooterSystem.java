@@ -13,7 +13,9 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
-public class ShooterSystem {
+public class    ShooterSystem {
+
+
 
     private DcMotorEx shooterLeft, shooterRight;
 
@@ -75,14 +77,14 @@ public class ShooterSystem {
         float normBlue2 = colors2.blue  / colors2.alpha;
 
         // Only log if telemetry is NOT null
-        if (telemetry != null) {
+        /*if (telemetry != null) {
             telemetry.addData("red", normRed);
             telemetry.addData("Green", normGreen);
             telemetry.addData("Blue", normBlue);
             telemetry.addData("red2", normRed2);
             telemetry.addData("Green2", normGreen2);
             telemetry.addData("Blue2", normBlue2);
-        }
+        }*/
 
         // GREEN thresholds
         if ((normRed < 0.2 && normGreen > 0.6 && normBlue < 0.6) ||
@@ -160,77 +162,67 @@ public class ShooterSystem {
         feederServo.setPower(-servoPower);
     }
 
-    //   ---------------- SPINDEXER CW ----------------
-
     boolean spinning = false;
     double targetAngle = 0;
     final double TOLERANCE = 5;
 
+
     int direction = 0;
 
-    // PID constants
+
+    // PID constants — YOU MUST TUNE THESE
     double kPS = 0.0052;
     double kIS = 0.000;
     double kDS = 0.0021;
 
+
     double integral = 0;
     double lastError = 0;
 
+
     // Optimal angles
     final double[] optimalAngles = {77.1455, 185.7091, 313.1455};
-    public int currentTargetIndex = -1;
-    public int getCurrentSlot() {
-        double voltage = AnalogEncoder.getVoltage();
-        double angle = (voltage / 3.3) * 360.0;
+    int currentTargetIndex = -1;
 
-        // Normalize angle to 0-360
-        angle = ((angle % 360) + 360) % 360;
-
-        // Your optimal angles:
-        // 0: 77°, 1: 185°, 2: 313°
-        double[] centers = {77.1, 185.7, 313.1};
-
-        // Find closest center
-        int best = 0;
-        double bestError = 9999;
-        for (int i = 0; i < 3; i++) {
-            double err = Math.abs(angle - centers[i]);
-            if (err < bestError) {
-                bestError = err;
-                best = i;
-            }
-        }
-
-        return best;  // 0,1,2
-    }
 
     public void spinToNextAngle() {
         if (spinning) return;
 
+
         // Move to next target
         if (currentTargetIndex == -1) {
             currentTargetIndex = 0;
-        } else {
-            currentTargetIndex = ((currentTargetIndex - 1) + optimalAngles.length) % optimalAngles.length;
+        }
+        else {
+            currentTargetIndex = ((currentTargetIndex - 1) + 3) % optimalAngles.length;
         }
 
+
         targetAngle = optimalAngles[currentTargetIndex] + 30;
+
 
         // Reset PID internal state
         integral = 0;
         lastError = 0;
 
+
         spinning = true;
     }
+
 
     public void update() {
         if (!spinning) return;
 
+
+        // Read current angle
         double voltage = AnalogEncoder.getVoltage();
         double angle = (voltage / 3.3) * 360.0;
 
+
+        // Compute CW-only error (positive if target is ahead CW)
         double error = targetAngle - angle;
         error = ((error + 540) % 360) - 180;
+
 
         // Stop if close enough
         if (error < TOLERANCE) {
@@ -239,15 +231,24 @@ public class ShooterSystem {
             return;
         }
 
+
+        // PID calculations
         integral += error;
         double derivative = error - lastError;
         lastError = error;
 
+
         double power = kPS * error + kIS * integral + kDS * derivative;
 
+
+        // Clamp since CR servos require [-1, 1]
         power = Range.clip(power, 0, 1);
+
+
+        // Apply power (CW only)
         spindexerServo.setPower(power);
     }
+
 
     public boolean isSpinning() {
         return spinning;
@@ -408,7 +409,7 @@ public class ShooterSystem {
         lastErrorServo = error;
         lastTimeServo = now;
 
-        if (Math.abs(error) < TOLERANCESERVO && Math.abs(power) < 0.02) {
+        if (Math.abs(error) < TOLERANCESERVO && Math.abs(power) < 0.5) {
             feederServo.setPower(0);
             feederServo2.setPower(0);
             spinningServo = false;

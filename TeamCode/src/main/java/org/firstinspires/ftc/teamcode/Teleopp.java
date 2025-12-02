@@ -47,6 +47,7 @@ public class Teleopp extends LinearOpMode {
         shooterSystem = new ShooterSystem(hardwareMap);
 
 
+
         ShooterSystem.DetectedColor detectedColor;
 
 
@@ -58,7 +59,15 @@ public class Teleopp extends LinearOpMode {
         servoEncoder = hardwareMap.get(AnalogInput.class, "servoEncoder");
 
 
-        boolean shooter = false, prevDpad_Left = false, intake = false, prevLBumper = false, shooter2 = false, prevDpad_right = false, prevRBumper = false, intake2 = false, prevY = false, kicker = false, shootingKicker = false;
+        boolean shooterHigh = false;   // B button (2050 rpm)
+        boolean shooterLow  = false;   // A button (1675 rpm)
+
+        boolean prevA = false;
+        boolean prevB = false;
+        boolean intake = false, prevLBumper = false;
+        boolean intake2 = false, prevRBumper = false;
+        boolean prevY = false, kicker = false, shootingKicker = false;
+
 
 
         shooterSystem.KickerUp();
@@ -130,25 +139,35 @@ public class Teleopp extends LinearOpMode {
             // ---------------- SHOOTER ----------------
 
 
-            if (currentDpad_left && !prevDpad_Left) {
-                shooter2 = !shooter2;
-                if (shooter2) {
-                    shooterSystem.setShooterTargetRpm(1675);  // also 2500 or change it
+            boolean currentA = gamepad1.a;
+            boolean currentB = gamepad1.b;
+
+// ---------------- SHOOTER CONTROL ----------------
+
+// Low-power shooter toggle (A)
+            if (currentA && !prevA) {
+                shooterLow = !shooterLow;
+                shooterHigh = false;  // ensure only one mode active
+
+                if (shooterLow) {
+                    shooterSystem.setShooterTargetRpm(1675);
                 } else {
                     shooterSystem.stopShooterBangBang();
                 }
             }
 
+// High-power shooter toggle (B)
+            if (currentB && !prevB) {
+                shooterHigh = !shooterHigh;
+                shooterLow = false;
 
-
-            if (currentDpad_right && !prevDpad_right) {
-                shooter = !shooter;
-                if (shooter) {
-                    shooterSystem.setShooterTargetRpm(2050);  // 🔥 YOUR RPM HERE
+                if (shooterHigh) {
+                    shooterSystem.setShooterTargetRpm(2050);
                 } else {
                     shooterSystem.stopShooterBangBang();
                 }
             }
+
 
 
             // ---------------- INTAKE ----------------
@@ -192,7 +211,7 @@ public class Teleopp extends LinearOpMode {
             //  ---------------- SPINDEXER ----------------
 
 
-            if (gamepad1.dpad_up && !shooterSystem.isSpinning()) {
+            if (gamepad1.dpad_up) {
                 shooterSystem.spinToNextAngle();
             }
             shooterSystem.update();
@@ -234,7 +253,7 @@ public class Teleopp extends LinearOpMode {
 
 
             // Shoots a Purple ball (SHOOTER MUST ALREADY BE ACTIVE)
-            if(gamepad1.b && !shooterSystem.isSpinning() && !shooterSystem.isSpinning2() && ballAmount != 0 && shooterSystem.containsPurple(spindexerBalls) != -1 && shooterSystem.currentTargetIndex != -1)
+            /*if(gamepad1.b && !shooterSystem.isSpinning() && !shooterSystem.isSpinning2() && ballAmount != 0 && shooterSystem.containsPurple(spindexerBalls) != -1 && shooterSystem.currentTargetIndex != -1)
             {
                 int rotation = shooterSystem.containsPurple(spindexerBalls) - shooterSystem.currentTargetIndex;
                 if(rotation == 0)
@@ -259,7 +278,7 @@ public class Teleopp extends LinearOpMode {
                 spindexerBalls[shooterSystem.currentTargetIndex] = 0;
 
 
-            }
+            }*/
 
 
             //  ---------------- COLOR SENSORS ----------------
@@ -290,10 +309,7 @@ public class Teleopp extends LinearOpMode {
             }
             // ---------------- STATE MACHINE ----------------
 
-
-            prevDpad_Left = currentDpad_left;
             prevLBumper = currentLBumper;
-            prevDpad_right = currentDpad_right;
             prevRBumper = currentRBumper;
             prevY = currentY;
 
@@ -309,7 +325,7 @@ public class Teleopp extends LinearOpMode {
 
 
             //   ---------------- TELEMETRY ----------------
-            telemetry.addData("Target RPM", shooterSystem.getShooterTargetRpm());
+           /* telemetry.addData("Target RPM", shooterSystem.getShooterTargetRpm());
             telemetry.addData("RPM Raw", shooterSystem.getShooterRpm());
             telemetry.addData("Shooter Speed OK", shooterSystem.atShooterSpeed());
             telemetry.addData("Mode", shooterSystem.shooterMode); // if you want mode display
@@ -318,17 +334,17 @@ public class Teleopp extends LinearOpMode {
             telemetry.addData("ContainsPurple", shooterSystem.containsPurple(spindexerBalls));
             telemetry.addData("spindexerBalls1", spindexerBalls[0]);
             telemetry.addData("spindexerBalls2", spindexerBalls[1]);
-            telemetry.addData("spindexerBalls3", spindexerBalls[2]);
-            telemetry.addData("INDEX", spindexerBallIndex);
+            telemetry.addData("spindexerBalls3", spindexerBalls[2]);*/
+            //telemetry.addData("INDEX", spindexerBallIndex);
             telemetry.addData("CURRENTTARGETINDEX", shooterSystem.currentTargetIndex);
-            telemetry.addData("Ball Amount", ballAmount);
-            telemetry.addData("Detected Color", detectedColor);
+            /*telemetry.addData("Ball Amount", ballAmount);
+            telemetry.addData("Detected Color", detectedColor);*/
 
 
-            //telemetry.addData("Target2", shooterSystem.targetAngle2);
-            //telemetry.addData("Target", shooterSystem.targetAngle);
-            //telemetry.addData("Diff", (shooterSystem.targetAngle - angle + 360) % 360);
-            //telemetry.addData("Angle (deg)", angle);
+            telemetry.addData("Target2", shooterSystem.targetAngle2);
+            telemetry.addData("Target", shooterSystem.targetAngle);
+            telemetry.addData("Diff", shooterSystem.lastSpindexerError);
+            telemetry.addData("Angle (deg)", angle);
             telemetry.update();
         }
     }

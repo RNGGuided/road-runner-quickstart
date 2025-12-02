@@ -127,7 +127,7 @@ public class ShooterActions {
     // --------------------------------------------------------
     public Action feedFull(double seconds) {
         return new SequentialAction(
-                p -> { shooter.controlFeeder(-1, 0); return false; },
+                p -> { shooter.controlFeeder(1, 0); return false; },
                 new SleepAction(seconds),
                 p -> { shooter.controlFeeder(0, 0); return false; }
         );
