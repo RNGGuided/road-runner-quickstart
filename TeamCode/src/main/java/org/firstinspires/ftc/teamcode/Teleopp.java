@@ -59,14 +59,10 @@ public class Teleopp extends LinearOpMode {
         servoEncoder = hardwareMap.get(AnalogInput.class, "servoEncoder");
 
 
-        boolean shooterHigh = false;   // B button (2050 rpm)
-        boolean shooterLow  = false;   // A button (1675 rpm)
+        boolean shooter = false, prevDpad_Left = false, intake = false, prevLBumper = false, shooter2 = false, prevDpad_right = false, prevRBumper = false, intake2 = false, prevY = false, kicker = false, shootingKicker = false;
 
-        boolean prevA = false;
-        boolean prevB = false;
-        boolean intake = false, prevLBumper = false;
-        boolean intake2 = false, prevRBumper = false;
-        boolean prevY = false, kicker = false, shootingKicker = false;
+
+
 
 
 
@@ -131,11 +127,7 @@ public class Teleopp extends LinearOpMode {
 
 
 
-            if(shootingKicker && !shooterSystem.isSpinning() && !shooterSystem.isSpinning2())
-            {
-                shooterSystem.KickerDown();
-                shootingKicker = false;
-            }
+
             // ---------------- SHOOTER ----------------
 
 
@@ -145,28 +137,30 @@ public class Teleopp extends LinearOpMode {
 // ---------------- SHOOTER CONTROL ----------------
 
 // Low-power shooter toggle (A)
-            if (currentA && !prevA) {
-                shooterLow = !shooterLow;
-                shooterHigh = false;  // ensure only one mode active
-
-                if (shooterLow) {
-                    shooterSystem.setShooterTargetRpm(1675);
+            if (currentDpad_left && !prevDpad_Left) {
+                shooter2 = !shooter2;  // toggle shooter ON/OFF
+                if (shooter2) {
+                    shooterSystem.setShooterTargetRpm(1615
+                        );
                 } else {
                     shooterSystem.stopShooterBangBang();
                 }
             }
 
-// High-power shooter toggle (B)
-            if (currentB && !prevB) {
-                shooterHigh = !shooterHigh;
-                shooterLow = false;
 
-                if (shooterHigh) {
-                    shooterSystem.setShooterTargetRpm(2050);
+            if (currentDpad_right && !prevDpad_right) {
+                shooter = !shooter;  // toggle shooter ON/OFF
+                if (shooter) {
+                    //shooterSystem.shoot(1);
+                    shooterSystem.setShooterTargetRpm(4800);
+
+
                 } else {
                     shooterSystem.stopShooterBangBang();
+                    //shooterSystem.shoot(0);
                 }
             }
+
 
 
 
@@ -211,46 +205,20 @@ public class Teleopp extends LinearOpMode {
             //  ---------------- SPINDEXER ----------------
 
 
-            if (gamepad1.dpad_up) {
-                shooterSystem.spinToNextAngle();
+            if (gamepad1.a) {
+                shooterSystem.KickerUp();
+                shooterSystem.spin1();
             }
-            shooterSystem.update();
 
 
-            if (gamepad1.dpad_down && !shooterSystem.isSpinning2()) {
-                shooterSystem.spinToNextAngle2();
+
+            if (gamepad1.b) {
+                shooterSystem.nextShootSlot();
             }
-            shooterSystem.update2();
+
 
 
             // Shoots a Green ball (SHOOTER MUST ALREADY BE ACTIVE)
-            if(gamepad1.x && !shooterSystem.isSpinning() && !shooterSystem.isSpinning2() && ballAmount != 0 && shooterSystem.containsGreen(spindexerBalls) != -1 && shooterSystem.currentTargetIndex != -1)
-            {
-                int rotation = shooterSystem.containsGreen(spindexerBalls) - shooterSystem.currentTargetIndex;
-                if(rotation == 0)
-                {
-                    shooterSystem.KickerDown();
-                }
-                else if (rotation == -1 || rotation == 2)
-                {
-                    shooterSystem.spinToNextAngle();
-                    shootingKicker = true;
-                    kickerTimer = System.currentTimeMillis();
-                }
-                else if (rotation == 1 || rotation == -2)
-                {
-                    shooterSystem.spinToNextAngle2();
-                    shootingKicker = true;
-                    kickerTimer = System.currentTimeMillis();
-                }
-
-
-                ballAmount--;
-                spindexerBalls[shooterSystem.containsGreen(spindexerBalls)] = 0;
-
-
-            }
-
 
             // Shoots a Purple ball (SHOOTER MUST ALREADY BE ACTIVE)
             /*if(gamepad1.b && !shooterSystem.isSpinning() && !shooterSystem.isSpinning2() && ballAmount != 0 && shooterSystem.containsPurple(spindexerBalls) != -1 && shooterSystem.currentTargetIndex != -1)
@@ -284,50 +252,37 @@ public class Teleopp extends LinearOpMode {
             //  ---------------- COLOR SENSORS ----------------
 
 
-            detectedColor = shooterSystem.getDetectedColor(telemetry);
 
-
-            if(detectedColor != ShooterSystem.DetectedColor.UNKNOWN && ballAmount != 3 && !shooterSystem.isSpinning2() && !shooterSystem.isSpinning())
-            {
-                spindexerBallIndex = shooterSystem.currentTargetIndex;
-
-
-                if(spindexerBallIndex == -1)
-                {
-                    spindexerBallIndex = 0;
-                }
-                if(detectedColor == ShooterSystem.DetectedColor.GREEN && spindexerBalls[spindexerBallIndex] != 1)
-                {
-                    spindexerBalls[spindexerBallIndex] = 1;
-                    ballAmount = (ballAmount + 1) % 4;
-                }
-                else if (detectedColor == ShooterSystem.DetectedColor.PURPLE && spindexerBalls[spindexerBallIndex] != 2)
-                {
-                    spindexerBalls[spindexerBallIndex] = 2;
-                    ballAmount = (ballAmount + 1) % 4;
-                }
-            }
             // ---------------- STATE MACHINE ----------------
 
+            prevDpad_Left = currentDpad_left;
             prevLBumper = currentLBumper;
+            prevDpad_right = currentDpad_right;
             prevRBumper = currentRBumper;
             prevY = currentY;
 
 
             // ---------------- FEEDER SERVO ----------------
-            if (gamepad2.y) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.HYBRID);
+            /*if (gamepad2.y) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.HYBRID);
             if (gamepad2.x) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.PIDF);
             if (gamepad2.b) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.BANG_BANG);
-
+*/
 
 
             shooterSystem.controlFeeder(gamepad1.right_trigger, gamepad1.left_trigger);
 
+            double ang = shooterSystem.spindexerEncoder.getCurrentPosition();
 
-            //   ---------------- TELEMETRY ----------------
-           /* telemetry.addData("Target RPM", shooterSystem.getShooterTargetRpm());
+            telemetry.addData("Spindexer angle (rad)", ang);
+            telemetry.addData("Spindexer angle (deg)", Math.toDegrees(ang));
+            telemetry.addData("vel_L_ticks_per_sec", shooterSystem.shooterLeft.getVelocity());
+            telemetry.addData("pos_L_ticks", shooterSystem.shooterLeft.getCurrentPosition());
+            telemetry.addData("vel_R_ticks_per_sec", shooterSystem.shooterRight.getVelocity());
+            telemetry.addData("pos_R_ticks", shooterSystem.shooterRight.getCurrentPosition());
+
+            telemetry.addData("Target RPM", shooterSystem.getShooterTargetRpm());
             telemetry.addData("RPM Raw", shooterSystem.getShooterRpm());
-            telemetry.addData("Shooter Speed OK", shooterSystem.atShooterSpeed());
+            /*telemetry.addData("Shooter Speed OK", shooterSystem.atShooterSpeed());
             telemetry.addData("Mode", shooterSystem.shooterMode); // if you want mode display
             telemetry.update();
             telemetry.addData("Shooter RPM", shooterSystem.getShooterRpm());
@@ -336,14 +291,11 @@ public class Teleopp extends LinearOpMode {
             telemetry.addData("spindexerBalls2", spindexerBalls[1]);
             telemetry.addData("spindexerBalls3", spindexerBalls[2]);*/
             //telemetry.addData("INDEX", spindexerBallIndex);
-            telemetry.addData("CURRENTTARGETINDEX", shooterSystem.currentTargetIndex);
             /*telemetry.addData("Ball Amount", ballAmount);
             telemetry.addData("Detected Color", detectedColor);*/
 
 
-            telemetry.addData("Target2", shooterSystem.targetAngle2);
-            telemetry.addData("Target", shooterSystem.targetAngle);
-            telemetry.addData("Diff", shooterSystem.lastSpindexerError);
+            //telemetry.addData("Diff", shooterSystem.lastSpindexerError);
             telemetry.addData("Angle (deg)", angle);
             telemetry.update();
         }

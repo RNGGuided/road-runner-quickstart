@@ -21,18 +21,7 @@ public class ShooterActions {
     // --------------------------------------------------------
     // BALL TRACKING (color sensors)
     // --------------------------------------------------------
-    public void updateBallTracking() {
-        ShooterSystem.DetectedColor col = shooter.getDetectedColor(null);
-        if (col == ShooterSystem.DetectedColor.UNKNOWN) return;
 
-        int index = shooter.currentTargetIndex;
-        if (index == -1) index = 0;
-
-        if (col == ShooterSystem.DetectedColor.GREEN)
-            spindexerBalls[index] = 1;
-        else if (col == ShooterSystem.DetectedColor.PURPLE)
-            spindexerBalls[index] = 2;
-    }
 
     // --------------------------------------------------------
     // SHOOTER MODE
@@ -107,8 +96,14 @@ public class ShooterActions {
     // --------------------------------------------------------
     public Action indexNextAngle(double timeoutSeconds) {
         return new SequentialAction(
-                p -> { shooter.spinToNextAngle(); return false; },
-                waitUntil(() -> !shooter.isSpinning(), timeoutSeconds, true)
+                p -> { shooter.nextIntakeSlot(); return false; },
+                 waitUntil(() -> !shooter.isSpinningServo(), timeoutSeconds, true)
+        );
+    }
+    public Action indexNextAngle1(double timeoutSeconds) {
+        return new SequentialAction(
+                p -> { shooter.nextIntakeSlot(); return false; }
+                //waitUntil(() -> !shooter.isSpinning(), timeoutSeconds, true)
         );
     }
 
@@ -117,8 +112,8 @@ public class ShooterActions {
     // --------------------------------------------------------
     public Action indexNextAngleReverse(double timeoutSeconds) {
         return new SequentialAction(
-                p -> { shooter.spinToNextAngle2(); return false; },
-                waitUntil(() -> !shooter.isSpinning2(), timeoutSeconds, true)
+                p -> { shooter.nextShootSlot(); return false; }
+                //waitUntil(() -> !shooter.isSpinning2(), timeoutSeconds, true)
         );
     }
 
@@ -145,11 +140,7 @@ public class ShooterActions {
 
                 if (startNs == -1) startNs = System.nanoTime();
 
-                shooter.update();                // CW indexer
-                shooter.update2();               // CCW indexer
-                shooter.updateServo();           // servo indexer
-                shooter.updateShooterBangBang(); // shooter control
-                updateBallTracking();            // color tracking
+                          // color tracking
 
                 double t = (System.nanoTime() - startNs) / 1e9;
                 return t < seconds;
@@ -171,13 +162,7 @@ public class ShooterActions {
 
                 if (startNs == -1) startNs = System.nanoTime();
 
-                if (doUpdates) {
-                    shooter.update();
-                    shooter.update2();
-                    shooter.updateServo();
-                    shooter.updateShooterBangBang();
-                    updateBallTracking();
-                }
+
 
                 double t = (System.nanoTime() - startNs) / 1e9;
 

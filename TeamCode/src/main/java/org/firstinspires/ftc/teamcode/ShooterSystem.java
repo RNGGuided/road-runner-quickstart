@@ -11,19 +11,26 @@ import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
+import com.seattlesolvers.solverslib.hardware.AbsoluteAnalogEncoder;
+import com.seattlesolvers.solverslib.hardware.motors.CRServoEx;
+
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class    ShooterSystem {
 
 
 
-    private DcMotorEx shooterLeft, shooterRight;
+    public DcMotorEx shooterLeft, shooterRight;
 
     private DcMotor intake;
-    private CRServo feederServo, spindexerServo, feederServo2;
+    private CRServo feederServo, feederServo2;
     private Servo Kicker1, Kicker2;
-
-    private AnalogInput AnalogEncoder, servoEncoder;
+    public AbsoluteAnalogEncoder spindexerEncoder;
+    public CRServoEx spindexer;
+    private AnalogInput servoEncoder;
     private NormalizedColorSensor colorSensor, colorSensor2;
 
     public double optimalAngle1 = 0, optimalAngle2 = 0, optimalAngle3 = 0;
@@ -38,9 +45,6 @@ public class    ShooterSystem {
     public ShooterSystem(HardwareMap hardwareMap) {
         shooterLeft = hardwareMap.get(DcMotorEx.class, "shooterLeft");
         shooterRight = hardwareMap.get(DcMotorEx.class, "shooterRight");
-
-        shooterLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        shooterRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         shooterLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         shooterRight.setDirection(DcMotorSimple.Direction.REVERSE);
 // port 3
@@ -52,9 +56,12 @@ public class    ShooterSystem {
         Kicker1 = hardwareMap.get(Servo.class, "Kicker1");             // servo port 1
         Kicker2 = hardwareMap.get(Servo.class, "Kicker2");             // servo port 3
 
-        spindexerServo = hardwareMap.get(CRServo.class, "SpindexerServo"); // servo port 2
-
-        AnalogEncoder = hardwareMap.get(AnalogInput.class, "MelonEncoder1");
+        //AbsoluteAnalogEncoder spindexerEncoder = new AbsoluteAnalogEncoder(hardwareMap, "MelonEncoder1");
+        spindexerEncoder = new AbsoluteAnalogEncoder(hardwareMap, "MelonEncoder1");
+        spindexer = new CRServoEx(hardwareMap, "SpindexerServo", spindexerEncoder, CRServoEx.RunMode.OptimizedPositionalControl);
+        //CRServoEx spindexer = new CRServoEx(hardwareMap, "s_crServoEx", spindexerEncoder, CRServoEx.RunMode.OptimizedPositionalControl);
+        spindexer.setPIDF(new PIDFCoefficients(0.8, 0.0, 0.1, 0.0001));
+        spindexer.setCachingTolerance(0.0002);
         servoEncoder = hardwareMap.get(AnalogInput.class, "servoEncoder");
 
         colorSensor = hardwareMap.get(NormalizedColorSensor.class, "spindexerColorSensor");
@@ -63,7 +70,58 @@ public class    ShooterSystem {
         colorSensor2 = hardwareMap.get(NormalizedColorSensor.class, "spindexerColorSensor2");
         colorSensor2.setGain(12);
     }
+//spindexer
+// degrees
+    private final double[] shootAngles  = {29.34, 149.23, 269.5636};
+    private final double[] intakeAngles = {88.36, 212.4, 330.65 };
 
+
+    private int shootIndex  = 0;
+    private int intakeIndex = 0;
+
+    private double currentTargetDeg = 0;
+    private boolean spindexerBusy = false;
+    private static final double SPINDEX_TOL_DEG = .5;
+    public void nextShootSlot() {
+        shootIndex = (shootIndex + 1) % 3;
+        setShootSlot(shootIndex);
+    }
+
+    public void prevShootSlot() {
+        shootIndex = (shootIndex + 2) % 3;
+        setShootSlot(shootIndex);
+    }
+
+    public void setShootSlot(int slot) {
+        slot = Math.max(0, Math.min(2, slot));
+        currentTargetDeg = shootAngles[slot];
+        spindexer.set(Math.toRadians(currentTargetDeg)); // SolversLib handles shortest path + PIDF
+    }
+
+    public void nextIntakeSlot() {
+        intakeIndex = (intakeIndex + 1) % 3;
+        setIntakeSlot(intakeIndex);
+    }
+
+    public void prevIntakeSlot() {
+        intakeIndex = (intakeIndex + 2) % 3;
+        setIntakeSlot(intakeIndex);
+    }
+
+    public void setIntakeSlot(int slot) {
+        slot = Math.max(0, Math.min(2, slot));
+        currentTargetDeg = intakeAngles[slot];
+        spindexer.set(Math.toRadians(currentTargetDeg));
+    }
+
+    public void spin1() {
+        spindexer.set(Math.toRadians(88.36));
+    }
+    public boolean isSpindexerBusy() {
+        return spindexerBusy;
+    }
+
+    //color
     public DetectedColor getDetectedColor(Telemetry telemetry) {
         NormalizedRGBA colors = colorSensor.getNormalizedColors();
         NormalizedRGBA colors2 = colorSensor2.getNormalizedColors();
@@ -160,159 +218,6 @@ public class    ShooterSystem {
 
         feederServo2.setPower(servoPower);
         feederServo.setPower(-servoPower);
-    }
-
-    boolean spinning = false;
-    double targetAngle = 0;
-    final double TOLERANCE = 5;
-
-
-    int direction = 0;
-
-
-    // PID constants — YOU MUST TUNE THESE
-    double kPS = 0.0052;
-    double kIS = 0.000;
-    double kDS = 0.0021;
-
-
-    double integral = 0;
-    double lastError = 0;
-
-
-    // Optimal angles
-    final double[] optimalAngles = {77.1455, 185.7091, 313.1455};
-    int currentTargetIndex = -1;
-
-
-    public void spinToNextAngle() {
-        if (spinning) return;
-
-
-        // Move to next target
-        if (currentTargetIndex == -1) {
-            currentTargetIndex = 0;
-        }
-        else {
-            currentTargetIndex = ((currentTargetIndex - 1) + 3) % optimalAngles.length;
-        }
-
-
-        targetAngle = optimalAngles[currentTargetIndex] + 30;
-
-
-        // Reset PID internal state
-        integral = 0;
-        lastError = 0;
-
-
-        spinning = true;
-    }
-
-
-    public void update() {
-        if (!spinning) return;
-
-
-        // Read current angle
-        double voltage = AnalogEncoder.getVoltage();
-        double angle = (voltage / 3.3) * 360.0;
-
-
-        // Compute CW-only error (positive if target is ahead CW)
-        double error = targetAngle - angle;
-        error = ((error + 540) % 360) - 180;
-
-
-        // Stop if close enough
-        if (error < TOLERANCE) {
-            spindexerServo.setPower(0);
-            spinning = false;
-            return;
-        }
-
-
-        // PID calculations
-        integral += error;
-        double derivative = error - lastError;
-        lastError = error;
-
-
-        double power = kPS * error + kIS * integral + kDS * derivative;
-
-
-        // Clamp since CR servos require [-1, 1]
-        power = Range.clip(power, 0, 1);
-
-
-        // Apply power (CW only)
-        spindexerServo.setPower(power);
-    }
-
-
-    public boolean isSpinning() {
-        return spinning;
-    }
-
-    //  ---------------- SPINDEXER CCW ----------------
-
-    boolean spinning2 = false;
-    double targetAngle2 = 0;
-    final double TOLERANCE2 = 3.5;
-
-    double kPS2 = 0.0052;
-    double kIS2 = 0.000;
-    double kDS2 = 0.0023;
-
-    double integral2 = 0;
-    double lastError2 = 0;
-
-    public void spinToNextAngle2() {
-        if (spinning2) return;
-
-        if (currentTargetIndex == -1) {
-            currentTargetIndex = 0;
-        } else {
-            currentTargetIndex = (currentTargetIndex + 1) % optimalAngles.length;
-        }
-
-        targetAngle2 = optimalAngles[currentTargetIndex] - 25;
-
-        integral2 = 0;
-        lastError2 = 0;
-
-        spinning2 = true;
-    }
-
-    public void update2() {
-        if (!spinning2) return;
-
-        double voltage2 = AnalogEncoder.getVoltage();
-        double angle2 = (voltage2 / 3.3) * 360.0;
-
-        double error2 = angle2 - targetAngle2;
-        error2 = ((error2 + 540) % 360) - 180;
-
-        if (error2 < TOLERANCE2) {
-            spindexerServo.setPower(0);
-            spinning2 = false;
-            return;
-        }
-
-        integral2 += error2;
-        double derivative2 = error2 - lastError2;
-        lastError2 = error2;
-
-        double power2 = kPS2 * error2 + kIS2 * integral2 + kDS2 * derivative2;
-
-        power2 = Range.clip(power2, 0, 1);
-        power2 = -power2; // CCW
-
-        spindexerServo.setPower(power2);
-    }
-
-    public boolean isSpinning2() {
-        return spinning2;
     }
 
     //   ---------------- ANGLERS ----------------
@@ -423,7 +328,10 @@ public class    ShooterSystem {
 //                 SHOOTER CONTROL (MODES)
 // ======================================================
 
+
+
     public enum ShooterControlMode {
+
         BANG_BANG,
         HYBRID,
         PIDF
@@ -439,14 +347,14 @@ public class    ShooterSystem {
     private static final double SHOOTER_SMOOTHING = 0.2;
 
     // Bang-bang / hybrid behavior
-    private static final double RPM_TOLERANCE   = 40;   // when "close enough" for pure bang-bang
+    private static final double RPM_TOLERANCE   = 10;   // when "close enough" for pure bang-bang
     private static final double HYBRID_BAND_RPM = 250;  // how far below target we use full send
 
     // PIDF constants for shooter
 // *** YOU WILL TUNE THESE ***
     private double shooterKp = 0.0008;   // proportional gain
-    private double shooterKd = 0.0;      // start at 0, add later if needed
-    private double shooterKf = 0.0003;   // feedforward term (base power per RPM)
+    private double shooterKd = 0.0002;      // start at 0, add later if needed
+    private double shooterKf = 0.000225;   // feedforward term (base power per RPM)
 
     private double lastShooterError = 0;
 
@@ -468,17 +376,23 @@ public class    ShooterSystem {
     /** Read shooter velocity (averages both motors) */
     public double getShooterRpm() {
         // Adjust if your motor encoder CPR is not 28.
-        double ticksPerRev = 28.0;
+        double ticksPerRev = 28;
 
         double vL = shooterLeft.getVelocity();  // ticks/sec
-        double vR = shooterRight.getVelocity(); // ticks/sec
+        //double vR = shooterRight.getVelocity(); // ticks/sec
 
         double rpmL = (vL / ticksPerRev) * 60.0;
-        double rpmR = (vR / ticksPerRev) * 60.0;
+        //double rpmR = (vR / ticksPerRev) * 60.0;
 
-        return (rpmL + rpmR) / 2.0;
+        return rpmL;
     }
 
+    public double getShooterVelocity() {
+        return shooterLeft.getVelocity();
+    }
+    public double getCurrentPosition() {
+        return shooterLeft.getCurrentPosition();
+    }
     /** Main shooter control update – call EVERY LOOP (TeleOp + auton) */
     private void updateShooterControl() {
         double currentRpm = getShooterRpm();
@@ -561,6 +475,9 @@ public class    ShooterSystem {
         return shooterTargetRpm > 0 &&
                 Math.abs(shooterTargetRpm - shooterFilteredRpm) < RPM_TOLERANCE;
     }
+
+
+    /** Main shooter control update – call EVERY LOOP (TeleOp + auton) */
 
 
 

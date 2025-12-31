@@ -26,8 +26,8 @@ import com.acmerobotics.roadrunner.SequentialAction;
 
 import java.util.Arrays;
 
-@Autonomous(name = "RedBack")
-public class REDBACK extends LinearOpMode {
+@Autonomous(name = "BLUEBACK")
+public class BLUEBACK extends LinearOpMode {
     private ShooterSystem shooter;
 
     private ShooterActions SA;
@@ -41,8 +41,8 @@ public class REDBACK extends LinearOpMode {
 
         Action S= new SequentialAction(
                 SA.feedFull(.55),
-                SA.spinUpRpm(2050),
-                SA.waitUntil(() -> shooter.atShooterSpeed(), 5.0, true),
+                //SA.spinUpRpm(2050),
+                //SA.waitUntil(() -> shooter.atShooterSpeed(), 5.0, true),
                 SA.kickerDown(),
                 new SleepAction(.2),
                 SA.kickerUp(),
@@ -69,16 +69,16 @@ public class REDBACK extends LinearOpMode {
         // .strafeTo(new Vector2d(12.5, 34))
 
         //Pose2d initialPose = new Pose2d(9, 61.5, Math.toRadians(270));
-        Pose2d initialPose = new Pose2d(15.034, -61.169, Math.toRadians(90));
+        Pose2d initialPose = new Pose2d(-15.034, -61.169, Math.toRadians(90));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
 
         // Initialize slides
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .afterTime(0,S)
-                .strafeToLinearHeading(new Vector2d(14.776, -51.611), Math.toRadians(68))
+                .strafeToLinearHeading(new Vector2d(-14.776, -51.611), Math.toRadians(135))
                 .waitSeconds(15)
-                .strafeToLinearHeading(new Vector2d(22, -44), Math.toRadians(68))
+                .strafeToLinearHeading(new Vector2d(-22, -44), Math.toRadians(135))
                 .waitSeconds(.5);
         //.strafeToLinearHeading(new Vector2d(-38, 12), Math.PI)
 
