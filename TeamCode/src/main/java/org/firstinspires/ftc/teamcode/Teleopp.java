@@ -1,302 +1,305 @@
 package org.firstinspires.ftc.teamcode;
 
-
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.AnalogInput;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-
-import org.firstinspires.ftc.teamcode.ShooterSystem;
-
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.Range;
 
 @TeleOp(name = "Simple Mecanum Drive with Shooter", group = "TeleOp")
 public class Teleopp extends LinearOpMode {
 
-
+    // ---------------- DRIVE ----------------
     private DcMotor leftFront, rightFront, leftRear, rightRear;
+
+    // ---------------- SHOOTER ----------------
     private ShooterSystem shooterSystem;
 
+    // ---------------- LIMELIGHT ----------------
+    private Limelight3A limelight;
+    private LLResult ll;
 
-    AnalogInput analogEncoder, servoEncoder;
+    // ---------------- ANALOG INPUTS ----------------
+    private AnalogInput analogEncoder, servoEncoder;
 
+    // ---------------- AIM MODE ----------------
+    // ---- AutoShot toggle ----
+    private boolean autoShotEnabled = false;
+    private boolean prevX = false;
 
-    public int[] spindexerBalls = new int[3]; // 1 = green, 2 = purple
-    private int spindexerBallIndex = -1, ballAmount = 0;
-    long kickerTimer = 0;
+    // ---- DriveTrue toggle ----
+    private boolean drivetrue = false;
+    private boolean prevG2Y = false;
 
+    // ---- Manual shooter controls ----
+    private boolean prevDpadLeft = false;
+    private boolean prevDpadRight = false;
 
+    // ---- Angler trim ----
+    private boolean prevG2A = false;
+    private boolean prevG2B = false;
 
+    private boolean aimMode = false;
+    private boolean prevBack = false;
 
+    // Aim PD constants
+    private static final double AIM_KP = 0.02;
+    private static final double AIM_KD = 0.00011;
+    private static final double AIM_MAX_TURN = 0.75;
+    private static final double TX_TOL_DEG = 0.7;
+    private static final double MIN_TURN = 0.085;
 
+    // D state
+    private double lastTx = 0.0;
+    private long lastAimTimeMs = 0;
+
+    // ---------------- AUTO SHOT ----------------
+    private boolean prevStart = false;
+
+    private double filteredDistance = 0;
+    private static final double DIST_ALPHA = 0.2;
+
+    // ---------------- INTAKE / SHOOTER TOGGLES ----------------
+    private boolean shooterHigh = false;
+    private boolean shooterLow = false;
+    private boolean intakeFwd = false, prevLB = false;
+    private boolean intakeRev = false, prevRB = false;
+
+    // ---------------- KICKER ----------------
+    private boolean kickerActive = false;
+    private long kickerStartTime = 0;
+    private static final long KICKER_TIME_MS = 300;
+
+    private boolean prevY = false;
 
     @Override
     public void runOpMode() {
-        // Drive hardware map
-        leftFront = hardwareMap.get(DcMotor.class, "leftFront");
+
+        // -------- Hardware map --------
+        leftFront  = hardwareMap.get(DcMotor.class, "leftFront");
         rightFront = hardwareMap.get(DcMotor.class, "rightFront");
-        leftRear = hardwareMap.get(DcMotor.class, "leftRear");
-        rightRear = hardwareMap.get(DcMotor.class, "rightRear");
-
-
-
+        leftRear   = hardwareMap.get(DcMotor.class, "leftRear");
+        rightRear  = hardwareMap.get(DcMotor.class, "rightRear");
 
         leftFront.setDirection(DcMotor.Direction.REVERSE);
         leftRear.setDirection(DcMotor.Direction.REVERSE);
-        // Shooter system setup
+
         shooterSystem = new ShooterSystem(hardwareMap);
 
-
-
-        ShooterSystem.DetectedColor detectedColor;
-
-
-
-
-
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight.pipelineSwitch(0);
 
         analogEncoder = hardwareMap.get(AnalogInput.class, "MelonEncoder1");
-        servoEncoder = hardwareMap.get(AnalogInput.class, "servoEncoder");
+        servoEncoder  = hardwareMap.get(AnalogInput.class, "servoEncoder");
 
+        shooterSystem.KickerDown();
 
-        boolean shooter = false, prevDpad_Left = false, intake = false, prevLBumper = false, shooter2 = false, prevDpad_right = false, prevRBumper = false, intake2 = false, prevY = false, kicker = false, shootingKicker = false;
-
-
-
-
-
-
-        shooterSystem.KickerUp();
-
+        telemetry.addLine("Ready.");
+        telemetry.addLine("Robot-centric always.");
+        telemetry.addLine("BACK = toggle Aim Mode (Tx -> 0).");
+        telemetry.update();
 
         waitForStart();
-
+        limelight.start();
 
         while (opModeIsActive()) {
+
+            // ---------------- Subsystems ----------------
+            shooterSystem.handleSpindexerButtons(gamepad1.a, gamepad1.b);
+            shooterSystem.updateSpindexer();
+            shooterSystem.updateAngler();
             shooterSystem.updateShooterBangBang();
-            shooterSystem.getOptimalAngles();
-            shooterSystem.updateServo();
 
+            // ---------------- AutoShot toggle ----------------
+            boolean startNow = gamepad1.x;
+            if (startNow && !prevStart) {
+                autoShotEnabled = !autoShotEnabled;
+            }
 
-            // --------------- Switch Machine Var --------------
-            boolean currentDpad_left = gamepad1.dpad_left;
-            boolean currentLBumper = gamepad1.left_bumper;
-            boolean currentDpad_right = gamepad1.dpad_right;
-            boolean currentRBumper = gamepad1.right_bumper;
-            boolean currentY = gamepad1.y;
-            // ---------------- DRIVE ----------------
-            double y = -gamepad1.left_stick_y;
-            double x = gamepad1.left_stick_x;
+            prevStart = startNow;
+// ---------------- DriveTrue toggle (gamepad2.y) ----------------
+            boolean g2y = gamepad2.y;
+            if (g2y && !prevG2Y) {
+                drivetrue = !drivetrue;
+            }
+            prevG2Y = g2y;
+
+            if (autoShotEnabled) {
+                ll = limelight.getLatestResult();
+                if (ll != null && ll.isValid()) {
+                    double rawDistance =
+                            31.84 / Math.sin(Math.toRadians(ll.getTy() + 15));
+
+                    filteredDistance =
+                            filteredDistance * (1 - DIST_ALPHA) +
+                                    rawDistance * DIST_ALPHA;
+
+                    shooterSystem.updateAutoShot(filteredDistance);
+                }
+            } else if (drivetrue&!autoShotEnabled) {
+                boolean dpadLeft = gamepad1.dpad_left;
+                boolean dpadRight = gamepad1.dpad_right;
+
+                if (dpadLeft && !prevDpadLeft) {
+                    shooterSystem.setShooterTargetRpm(3250);
+                }
+
+                if (dpadRight && !prevDpadRight) {
+                    shooterSystem.setShooterTargetRpm(4250);
+                }
+
+                prevDpadLeft = dpadLeft;
+                prevDpadRight = dpadRight;
+
+                // ---- Angler trim ----
+                boolean g2b = gamepad2.b;
+                boolean g2a = gamepad2.a;
+
+                if (g2b && !prevG2B) {
+                    shooterSystem.setTargetangler(shooterSystem.hoodDeg + 10);
+                }
+
+                if (g2a && !prevG2A) {
+                    shooterSystem.setTargetangler(shooterSystem.hoodDeg - 10);
+                }
+
+                prevG2A = g2a;
+                prevG2B = g2b;
+            }
+            else {
+                shooterSystem.stopShooterBangBang();
+            }
+
+            // ---------------- Aim mode toggle ----------------
+            boolean back = gamepad2.back;
+            if (back && !prevBack) {
+                aimMode = !aimMode;
+            }
+            prevBack = back;
+
+            // ---------------- Drive input ----------------
+            double y  = gamepad1.left_stick_y;
+            double x  = -gamepad1.left_stick_x;
             double rx = gamepad1.right_stick_x;
 
+            ll = limelight.getLatestResult();
+            double turn = rx;
 
-            double frontLeftPower  = y + x + rx;
-            double backLeftPower   = y - x + rx;
-            double frontRightPower = y - x - rx;
-            double backRightPower  = y + x - rx;
+            // ---------------- PD Aim ----------------
+            if (aimMode && ll != null && ll.isValid()) {
 
+                double tx = ll.getTx();
 
+                if (Math.abs(tx) <= TX_TOL_DEG) {
+                    turn = 0.0;
+                } else {
+                    long now = System.currentTimeMillis();
+                    double dt = (now - lastAimTimeMs) / 1000.0;
+                    if (dt <= 0) dt = 0.02;
 
+                    double dTx = (tx - lastTx) / dt;
 
-            double max = Math.max(Math.abs(frontLeftPower), Math.max(Math.abs(backLeftPower),
-                    Math.max(Math.abs(frontRightPower), Math.abs(backRightPower))));
+                    double out = (AIM_KP * tx) - (AIM_KD * dTx);
+                    out = Range.clip(out, -AIM_MAX_TURN, AIM_MAX_TURN);
+
+                    if (Math.abs(out) < MIN_TURN) {
+                        out = Math.copySign(MIN_TURN, tx);
+
+                    }
+
+                    turn = out;
+                    lastTx = tx;
+                    lastAimTimeMs = now;
+                }
+            }
+
+            // ---------------- Mecanum ----------------
+            double fl = y + x + turn;
+            double bl = y - x + turn;
+            double fr = y - x - turn;
+            double br = y + x - turn;
+
+            double max = Math.max(Math.abs(fl),
+                    Math.max(Math.abs(bl), Math.max(Math.abs(fr), Math.abs(br))));
+
             if (max > 1.0) {
-                frontLeftPower  /= max;
-                backLeftPower   /= max;
-                frontRightPower /= max;
-                backRightPower  /= max;
+                fl /= max;
+                bl /= max;
+                fr /= max;
+                br /= max;
             }
 
+            leftFront.setPower(fl);
+            leftRear.setPower(bl);
+            rightFront.setPower(fr);
+            rightRear.setPower(br);
 
-            leftFront.setPower(frontLeftPower);
-            leftRear.setPower(backLeftPower);
-            rightFront.setPower(frontRightPower);
-            rightRear.setPower(backRightPower);
+            // ---------------- Intake ----------------
+            boolean lb = gamepad1.left_bumper;
+            boolean rb = gamepad1.right_bumper;
 
-
-            //   ---------------- ANGLES ----------------
-
-
-            double voltage = analogEncoder.getVoltage(); // get voltage (0V–3.3V)
-            double angle = (voltage / 3.3) * 360.0;
-
-
-            double voltage2 = servoEncoder.getVoltage(); // get voltage (0V–3.3V)
-            double servoAngle = (voltage2 / 3.3) * 360.0;
-
-
-
-
-
-            // ---------------- SHOOTER ----------------
-
-
-            boolean currentA = gamepad1.a;
-            boolean currentB = gamepad1.b;
-
-// ---------------- SHOOTER CONTROL ----------------
-
-// Low-power shooter toggle (A)
-            if (currentDpad_left && !prevDpad_Left) {
-                shooter2 = !shooter2;  // toggle shooter ON/OFF
-                if (shooter2) {
-                    shooterSystem.setShooterTargetRpm(1615
-                        );
-                } else {
-                    shooterSystem.stopShooterBangBang();
-                }
+            if (lb && !prevLB) {
+                intakeFwd = !intakeFwd;
+                if (intakeFwd) shooterSystem.intakeOn(1.0);
+                else shooterSystem.intakeOff();
             }
+            prevLB = lb;
 
-
-            if (currentDpad_right && !prevDpad_right) {
-                shooter = !shooter;  // toggle shooter ON/OFF
-                if (shooter) {
-                    //shooterSystem.shoot(1);
-                    shooterSystem.setShooterTargetRpm(4800);
-
-
-                } else {
-                    shooterSystem.stopShooterBangBang();
-                    //shooterSystem.shoot(0);
-                }
+            if (rb && !prevRB) {
+                intakeRev = !intakeRev;
+                if (intakeRev) shooterSystem.intakeReverse(1.0);
+                else shooterSystem.intakeOff();
             }
+            prevRB = rb;
 
+            // ---------------- Kicker ----------------
+            boolean yNow = gamepad1.y;
 
-
-
-            // ---------------- INTAKE ----------------
-
-
-            if (currentLBumper && !prevLBumper) {
-                intake = !intake;
-                if(intake) {
-                    shooterSystem.intakeOn(1.0);
-                }
-                else {
-                    shooterSystem.intakeOff();
-                }
-            }
-
-
-            if (currentRBumper && !prevRBumper) {
-                intake2 = !intake2;
-                if(intake2) {
-                    shooterSystem.intakeReverse(1.0);
-                }
-                else {
-                    shooterSystem.intakeOff();
-                }
-            }
-
-            // ---------------- KICKER ----------------
-
-
-            if(currentY && !prevY) {
-                kicker = !kicker;
-                if(kicker) {
-                    shooterSystem.KickerDown(); // Puts them down when y is pressed
-                }
-                else {
-                    shooterSystem.KickerUp();
-                }
-            }
-
-
-            //  ---------------- SPINDEXER ----------------
-
-
-            if (gamepad1.a) {
+            if (yNow && !prevY && !kickerActive) {
                 shooterSystem.KickerUp();
-                shooterSystem.spin1();
+                kickerStartTime = System.currentTimeMillis();
+                kickerActive = true;
             }
 
-
-
-            if (gamepad1.b) {
-                shooterSystem.nextShootSlot();
+            if (kickerActive &&
+                    System.currentTimeMillis() - kickerStartTime >= KICKER_TIME_MS) {
+                shooterSystem.KickerDown();
+                kickerActive = false;
             }
+            prevY = yNow;
 
+            // ---------------- Telemetry ----------------
+            telemetry.addData("AimMode", aimMode);
+            telemetry.addData("AutoShot", autoShotEnabled);
 
+            if (ll != null) {
+                telemetry.addData("LL valid", ll.isValid());
+                telemetry.addData("Tx", ll.getTx());
+                telemetry.addData("Ty", ll.getTy());
+                telemetry.addData("Ta", ll.getTa());
 
-            // Shoots a Green ball (SHOOTER MUST ALREADY BE ACTIVE)
-
-            // Shoots a Purple ball (SHOOTER MUST ALREADY BE ACTIVE)
-            /*if(gamepad1.b && !shooterSystem.isSpinning() && !shooterSystem.isSpinning2() && ballAmount != 0 && shooterSystem.containsPurple(spindexerBalls) != -1 && shooterSystem.currentTargetIndex != -1)
-            {
-                int rotation = shooterSystem.containsPurple(spindexerBalls) - shooterSystem.currentTargetIndex;
-                if(rotation == 0)
-                {
-                    shooterSystem.KickerDown();
+                if (ll.isValid()) {
+                    double distance =
+                            31.84 / Math.sin(Math.toRadians(ll.getTy() + 15));
+                    telemetry.addData("Distance", distance);
                 }
-                else if (rotation == -1 || rotation == 2)
-                {
-                    shooterSystem.spinToNextAngle();
-                    shootingKicker = true;
-                    kickerTimer = System.currentTimeMillis();
-                }
-                else if (rotation == 1 || rotation == -2)
-                {
-                    shooterSystem.spinToNextAngle2();
-                    shootingKicker = true;
-                    kickerTimer = System.currentTimeMillis();
-                }
-
-
-                ballAmount--;
-                spindexerBalls[shooterSystem.currentTargetIndex] = 0;
-
-
-            }*/
-
-
-            //  ---------------- COLOR SENSORS ----------------
-
-
-
-            // ---------------- STATE MACHINE ----------------
-
-            prevDpad_Left = currentDpad_left;
-            prevLBumper = currentLBumper;
-            prevDpad_right = currentDpad_right;
-            prevRBumper = currentRBumper;
-            prevY = currentY;
-
-
-            // ---------------- FEEDER SERVO ----------------
-            /*if (gamepad2.y) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.HYBRID);
-            if (gamepad2.x) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.PIDF);
-            if (gamepad2.b) shooterSystem.setShooterMode(ShooterSystem.ShooterControlMode.BANG_BANG);
-*/
-
-
-            shooterSystem.controlFeeder(gamepad1.right_trigger, gamepad1.left_trigger);
+            }
 
             double ang = shooterSystem.spindexerEncoder.getCurrentPosition();
+            telemetry.addData("Spindexer Target (rad)", shooterSystem.targetRad);
+            telemetry.addData("Spindexer Angle (rad)", ang);
 
-            telemetry.addData("Spindexer angle (rad)", ang);
-            telemetry.addData("Spindexer angle (deg)", Math.toDegrees(ang));
-            telemetry.addData("vel_L_ticks_per_sec", shooterSystem.shooterLeft.getVelocity());
-            telemetry.addData("pos_L_ticks", shooterSystem.shooterLeft.getCurrentPosition());
-            telemetry.addData("vel_R_ticks_per_sec", shooterSystem.shooterRight.getVelocity());
-            telemetry.addData("pos_R_ticks", shooterSystem.shooterRight.getCurrentPosition());
+            double melonDeg = (analogEncoder.getVoltage() / 3.3) * 360.0;
+            double servoDeg = (servoEncoder.getVoltage() / 3.3) * 360.0;
 
-            telemetry.addData("Target RPM", shooterSystem.getShooterTargetRpm());
-            telemetry.addData("RPM Raw", shooterSystem.getShooterRpm());
-            /*telemetry.addData("Shooter Speed OK", shooterSystem.atShooterSpeed());
-            telemetry.addData("Mode", shooterSystem.shooterMode); // if you want mode display
-            telemetry.update();
+            telemetry.addData("MelonEnc (deg)", melonDeg);
+            telemetry.addData("ServoEnc (deg)", servoDeg);
+            telemetry.addData("HoodDeg", shooterSystem.hoodDeg);
+            telemetry.addData("Shooter Target RPM", shooterSystem.getShooterTargetRpm());
             telemetry.addData("Shooter RPM", shooterSystem.getShooterRpm());
-            telemetry.addData("ContainsPurple", shooterSystem.containsPurple(spindexerBalls));
-            telemetry.addData("spindexerBalls1", spindexerBalls[0]);
-            telemetry.addData("spindexerBalls2", spindexerBalls[1]);
-            telemetry.addData("spindexerBalls3", spindexerBalls[2]);*/
-            //telemetry.addData("INDEX", spindexerBallIndex);
-            /*telemetry.addData("Ball Amount", ballAmount);
-            telemetry.addData("Detected Color", detectedColor);*/
 
-
-            //telemetry.addData("Diff", shooterSystem.lastSpindexerError);
-            telemetry.addData("Angle (deg)", angle);
             telemetry.update();
         }
     }

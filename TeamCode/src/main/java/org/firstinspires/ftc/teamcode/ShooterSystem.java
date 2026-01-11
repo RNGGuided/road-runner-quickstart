@@ -1,5 +1,30 @@
 package org.firstinspires.ftc.teamcode;
 
+import androidx.core.math.MathUtils;
+import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.ProfileAccelConstraint;
+import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
+import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
+import com.acmerobotics.roadrunner.TranslationalVelConstraint;
+import com.acmerobotics.roadrunner.Vector2d;
+import com.acmerobotics.roadrunner.ftc.Actions;
+
+// Non-RR imports
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+
+import org.firstinspires.ftc.teamcode.MecanumDrive;
+import com.acmerobotics.roadrunner.ParallelAction;
+import com.acmerobotics.roadrunner.SequentialAction;
+
+import java.util.Arrays;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -19,7 +44,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
-public class    ShooterSystem {
+public class  ShooterSystem {
 
 
 
@@ -28,13 +53,16 @@ public class    ShooterSystem {
     private DcMotor intake;
     private CRServo feederServo, feederServo2;
     private Servo Kicker1, Kicker2;
-    public AbsoluteAnalogEncoder spindexerEncoder;
-    public CRServoEx spindexer;
+    public AbsoluteAnalogEncoder spindexerEncoder, AnglerEncoder;
+    public CRServoEx spindexer, Angler;
     private AnalogInput servoEncoder;
     private NormalizedColorSensor colorSensor, colorSensor2;
-
+    public CRServo anglerServo;              // raw CRServo
+    private HoodServoController hood;
     public double optimalAngle1 = 0, optimalAngle2 = 0, optimalAngle3 = 0;
     public double[] optimalAnglesSERVO = new double[3];
+
+    public double hoodDeg;
 
     public enum DetectedColor {
         GREEN,
@@ -51,19 +79,30 @@ public class    ShooterSystem {
         intake = hardwareMap.get(DcMotor.class, "intake");             // port 0
 
         feederServo = hardwareMap.get(CRServo.class, "feederServo");   // servo port 4
-        feederServo2 = hardwareMap.get(CRServo.class, "feederServo2"); // (0)
+        //feederServo2 = hardwareMap.get(CRServo.class, "feederServo2"); // (0)
 
         Kicker1 = hardwareMap.get(Servo.class, "Kicker1");             // servo port 1
         Kicker2 = hardwareMap.get(Servo.class, "Kicker2");             // servo port 3
+        AnglerEncoder = new AbsoluteAnalogEncoder(hardwareMap, "servoEncoder", 3.3, AngleUnit.DEGREES);
+        anglerServo   = hardwareMap.get(CRServo.class, "feederServo"); // the hood CR servo itself
 
-        //AbsoluteAnalogEncoder spindexerEncoder = new AbsoluteAnalogEncoder(hardwareMap, "MelonEncoder1");
-        spindexerEncoder = new AbsoluteAnalogEncoder(hardwareMap, "MelonEncoder1");
+        hood = new HoodServoController(
+                anglerServo,
+                AnglerEncoder,
+                new PIDFCoefficients(0.007, 0.0, 1, 0.0), // start simple; D usually 0 at first
+                8,   // min hood deg
+                220    // max hood deg (treated as "end stop", not wrap)
+        );
+        /*AnglerEncoder = new AbsoluteAnalogEncoder(hardwareMap, "servoEncoder", 3.3, AngleUnit.DEGREES);
+        Angler = new CRServoEx(hardwareMap, "feederServo", AnglerEncoder, CRServoEx.RunMode.OptimizedPositionalControl);*/
+        spindexerEncoder = new AbsoluteAnalogEncoder(hardwareMap, "MelonEncoder1", 3.3, AngleUnit.RADIANS);
         spindexer = new CRServoEx(hardwareMap, "SpindexerServo", spindexerEncoder, CRServoEx.RunMode.OptimizedPositionalControl);
         //CRServoEx spindexer = new CRServoEx(hardwareMap, "s_crServoEx", spindexerEncoder, CRServoEx.RunMode.OptimizedPositionalControl);
-        spindexer.setPIDF(new PIDFCoefficients(0.8, 0.0, 0.1, 0.0001));
-        spindexer.setCachingTolerance(0.0002);
-        servoEncoder = hardwareMap.get(AnalogInput.class, "servoEncoder");
-
+        spindexer.setPIDF(new PIDFCoefficients(0.275, 0.0, 1, 0));
+        //.5
+        spindexer.setCachingTolerance(.0002);
+        /*Angler.setPIDF(new PIDFCoefficients(.01, 0.0, 1, 0.0001));
+        Angler.setCachingTolerance(.0002);*/
         colorSensor = hardwareMap.get(NormalizedColorSensor.class, "spindexerColorSensor");
         colorSensor.setGain(12);
 
@@ -72,53 +111,75 @@ public class    ShooterSystem {
     }
 //spindexer
 // degrees
-    private final double[] shootAngles  = {29.34, 149.23, 269.5636};
-    private final double[] intakeAngles = {88.36, 212.4, 330.65 };
-
+// degrees
+private final double[] SHOOT_ANGLES  = { 81.5 ,201 ,320.5};
+    private final double[] INTAKE_ANGLES = {21, 140, 261};
 
     private int shootIndex  = 0;
     private int intakeIndex = 0;
 
-    private double currentTargetDeg = 0;
-    private boolean spindexerBusy = false;
-    private static final double SPINDEX_TOL_DEG = .5;
+    public double targetRad = Math.toRadians(201);
+    public double targetangler = 15;
+    // edge state (store here so it can't get duplicated)
+    private boolean prevA = false;
+    private boolean prevB = false;
+    private boolean prevX = false;
+
+    public void handleSpindexerButtons(boolean a, boolean b) {
+        if (a && !prevA) {
+            KickerDown();
+            nextIntakeSlot();// or nextShootSlot(), your choice
+        }
+        if (b && !prevB) {
+            KickerDown();
+            nextShootSlot();
+        }
+        prevA = a;
+        prevB = b;
+    }
+
     public void nextShootSlot() {
-        shootIndex = (shootIndex + 1) % 3;
-        setShootSlot(shootIndex);
-    }
-
-    public void prevShootSlot() {
-        shootIndex = (shootIndex + 2) % 3;
-        setShootSlot(shootIndex);
-    }
-
-    public void setShootSlot(int slot) {
-        slot = Math.max(0, Math.min(2, slot));
-        currentTargetDeg = shootAngles[slot];
-        spindexer.set(Math.toRadians(currentTargetDeg)); // SolversLib handles shortest path + PIDF
+        shootIndex = (shootIndex + 1) % SHOOT_ANGLES.length;
+        setTargetDeg(SHOOT_ANGLES[shootIndex]);
     }
 
     public void nextIntakeSlot() {
-        intakeIndex = (intakeIndex + 1) % 3;
-        setIntakeSlot(intakeIndex);
+        intakeIndex = (intakeIndex + 1) % INTAKE_ANGLES.length;
+        setTargetDeg(INTAKE_ANGLES[intakeIndex]);
     }
 
-    public void prevIntakeSlot() {
-        intakeIndex = (intakeIndex + 2) % 3;
-        setIntakeSlot(intakeIndex);
+    private void setTargetDeg(double deg) {
+        targetRad = Math.toRadians(deg);
     }
 
-    public void setIntakeSlot(int slot) {
-        slot = Math.max(0, Math.min(2, slot));
-        currentTargetDeg = intakeAngles[slot];
-        spindexer.set(Math.toRadians(currentTargetDeg));
+    public void updateSpindexer() {
+        spindexer.set(targetRad); // call every loop
+    }
+    //Hood Angler
+    public void updateAngler() {
+        //Angler.set(targetangler); // call every loop
+        hood.update();
+    }
+    public void setTargetangler(double deg) {
+        targetangler = deg;
+        hood.setTargetDeg(targetangler);
     }
 
-    public void spin1() {
-        spindexer.set(Math.toRadians(88.36));
+    void updateAutoShot(double distanceInches) {
+        // --- RPM zone with hysteresis ---
+        if (distanceInches > 105) this.setShooterTargetRpm(4200);;
+        if (distanceInches < 95) this.setShooterTargetRpm(3400);;
+
+
+        // --- Hood mapping ---
+        hoodDeg = mapClamp(distanceInches, 0, 120, 20, 220.0);
+        this.setTargetangler(hoodDeg);
     }
-    public boolean isSpindexerBusy() {
-        return spindexerBusy;
+
+    static double mapClamp(double d, double dMin, double dMax, double aMin, double aMax) {
+        double t = (d - dMin) / (dMax - dMin);
+        t = Range.clip(t, 0.0, 1.0);
+        return aMin + t * (aMax - aMin);
     }
 
     //color
@@ -180,16 +241,6 @@ public class    ShooterSystem {
 
     // ------------ Shooter + Intake ------------
 
-    public void shoot(double power) {
-        shooterLeft.setPower(power);
-        shooterRight.setPower(power);
-    }
-
-    public void stopShooter() {
-        shooterLeft.setPower(0);
-        shooterRight.setPower(0);
-    }
-
     public void intakeOn(double power) {
         intake.setPower(-power);
     }
@@ -203,123 +254,27 @@ public class    ShooterSystem {
     }
 
     public void KickerUp() {
-        Kicker1.setPosition(0);
         Kicker2.setPosition(0.5);
     }
 
     public void KickerDown() {
-        Kicker1.setPosition(0.5);
-        Kicker2.setPosition(0);
-    }
+        Kicker2.setPosition(1);}
 
     // rightTrigger -> forward, leftTrigger -> reverse
     public void controlFeeder(double rightTrigger, double leftTrigger) {
         double servoPower = rightTrigger - leftTrigger; // combine both triggers
 
-        feederServo2.setPower(servoPower);
         feederServo.setPower(-servoPower);
     }
 
     //   ---------------- ANGLERS ----------------
 
-    int initCycles = 0;
-    boolean optimalSet = false;
 
-    public void getOptimalAngles() {
-        if (optimalSet) return;
-
-        double voltage2 = servoEncoder.getVoltage();
-        double angle2 = (voltage2 / 3.3) * 360.0;
-
-        if (initCycles < 5) { // wait a few cycles
-            initCycles++;
-            return;
-        }
-
-        optimalAngle1 = angle2;
-        optimalAngle2 = (angle2 + 40) % 360;
-        optimalAngle3 = (angle2 + 240) % 360;
-        optimalSet = true;
-
-        optimalAnglesSERVO[0] = (optimalAngle1 + 3) % 360;
-        optimalAnglesSERVO[1] = optimalAngle1;
-        optimalAnglesSERVO[2] = (optimalAngle1 - 3 + 360) % 360;
-    }
 
     //   ---------------- SERVO INDEXING ----------------
 
-    boolean spinningServo = false;
-    double targetAngleServo = 0;
-    final double TOLERANCESERVO = 2; // smaller tolerance since PID is smoother
+    public boolean spinningServo = false;
 
-    int currentTargetIndexServo = -1;
-    int directionServo = 1;
-
-    double kP = 0.08;
-    double kI = 0.000;
-    double kD = 0.001;
-
-    double integralServo = 0;
-    double lastErrorServo = 0;
-    long lastTimeServo = 0;
-
-    public void spinToNextAngleServo(double currentAngle) {
-        if (spinningServo) return;
-
-        if (currentTargetIndexServo == -1) {
-            currentTargetIndexServo = 0;
-        } else {
-            currentTargetIndexServo += directionServo;
-
-            if (currentTargetIndexServo >= optimalAnglesSERVO.length) {
-                currentTargetIndexServo = optimalAnglesSERVO.length - 2;
-                directionServo = -1;
-            } else if (currentTargetIndexServo < 0) {
-                currentTargetIndexServo = 1;
-                directionServo = 1;
-            }
-        }
-
-        targetAngleServo = optimalAnglesSERVO[currentTargetIndexServo];
-        spinningServo = true;
-
-        integralServo = 0;
-        lastErrorServo = 0;
-        lastTimeServo = System.currentTimeMillis();
-    }
-
-    public void updateServo() {
-        if (!spinningServo) return;
-
-        double voltage2 = servoEncoder.getVoltage();
-        double angle2 = (voltage2 / 3.3) * 360.0;
-
-        double error = targetAngleServo - angle2;
-        error = ((error + 540) % 360) - 180;
-
-        long now = System.currentTimeMillis();
-        double deltaTime = (now - lastTimeServo) / 1000.0;
-        if (deltaTime <= 0) deltaTime = 0.001;
-
-        integralServo += error * deltaTime;
-        double derivative = (error - lastErrorServo) / deltaTime;
-
-        double power = kP * error + kI * integralServo + kD * derivative;
-
-        power = Math.max(-0.3, Math.min(0.3, power));
-
-        feederServo.setPower(power);
-        feederServo2.setPower(-power);
-
-        lastErrorServo = error;
-        lastTimeServo = now;
-
-        if (Math.abs(error) < TOLERANCESERVO && Math.abs(power) < 0.5) {
-            feederServo.setPower(0);
-            feederServo2.setPower(0);
-            spinningServo = false;
-        }
-    }
 // ======================================================
 //                 BANG-BANG SHOOTER CONTROL
 // ======================================================

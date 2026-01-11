@@ -27,8 +27,8 @@ import com.acmerobotics.roadrunner.SequentialAction;
 
 import java.util.Arrays;
 
-@Autonomous(name = "REDFRONTREAL")
-public class DayOfAuton extends LinearOpMode {
+@Autonomous(name = "REDBACK")
+public class RedBack extends LinearOpMode {
     private ShooterSystem shooter;
 
     private ShooterActions SA;
@@ -39,28 +39,28 @@ public class DayOfAuton extends LinearOpMode {
         ShooterSystem shooter = new ShooterSystem(hardwareMap);
         ShooterActions SA = new ShooterActions(shooter, spindexerBalls);
 
-        Action S= new SequentialAction
+        Action Shootfar= new SequentialAction
                 (
-                        SA.setShooterRpm(3400),
-                        SA.waitUntil(() -> shooter.atShooterSpeed(), 1.6, true),
-                        SA.setHoodDeg(164),
-                        new SleepAction(0.3 ),
-                SA.kickerUp(),
+                        SA.setShooterRpm(4250),
+                        SA.waitUntil(() -> shooter.atShooterSpeed(), 5, true),
+                        SA.setHoodDeg(220),
+                        new SleepAction(1 ),
+                        SA.kickerUp(),
                         new SleepAction(0.2),
-                SA.kickerDown(),
-                        new SleepAction(0.1),
+                        SA.kickerDown(),
+                        new SleepAction(0.2),
                         SA.indexNextShootSlot(1),
-                        new SleepAction(.45),
-                SA.kickerUp(),
+                        new SleepAction(1.5 ),
+                        SA.kickerUp(),
                         new SleepAction(0.2),
-                SA.kickerDown(),
+                        SA.kickerDown(),
                         new SleepAction(0.25),
                         SA.indexNextShootSlot(1),
-                        new SleepAction(.4),
-                SA.kickerUp(),
+                        new SleepAction(1.5),
+                        SA.kickerUp(),
                         new SleepAction(0.2),
-                SA.kickerDown()
-        );
+                        SA.kickerDown()
+                );
         Action S2= new SequentialAction
                 (
                         SA.intakeReverse(1.0),
@@ -138,28 +138,16 @@ public class DayOfAuton extends LinearOpMode {
         // .strafeTo(new Vector2d(12.5, 34))
 
         //Pose2d initialPose = new Pose2d(9, 61.5, Math.toRadians(270));
-        Pose2d initialPose = new Pose2d(50.231, 49.674, Math.toRadians(225));
+        Pose2d initialPose = new Pose2d(14.509, -63.381, Math.toRadians(270));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
 
         // Initialize slides
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .afterTime(0,S)
-                .strafeToLinearHeading(new Vector2d(14.543,12),Math.toRadians(230))
-                .waitSeconds(3)
-                .strafeToLinearHeading(new Vector2d(28.75,9.25),Math.toRadians(2))
-                .afterTime(0,Intake)
-                .strafeTo(new Vector2d(50, 9.25 ), new TranslationalVelConstraint(9))
-                .afterTime(1,S2)
-                .strafeToLinearHeading(new Vector2d(13.527  ,17 ),Math.toRadians(227))
-                .waitSeconds(4.25)
-                .strafeToLinearHeading(new Vector2d(28.75,-14),Math.toRadians(2))
-                .afterTime(0,Intake2)
-                .strafeTo(new Vector2d(51, -14), new TranslationalVelConstraint(9 ))
-                .afterTime(1.45,S3)
-                .strafeToLinearHeading(new Vector2d(10,17),Math.toRadians(227))
-                .waitSeconds(4)
-                .strafeTo(new Vector2d(32, -3.517));
+                .afterTime(0,Shootfar)
+                .strafeToLinearHeading(new Vector2d(14.509, -58.671), Math.toRadians(247))
+                .waitSeconds(15)
+                .strafeToLinearHeading(new Vector2d(40.712, -59.26), Math.toRadians(270));
 
                 /*.strafeTo(new Vector2d(-6,45))
                 .splineToLinearHeading(new Pose2d(-35,36,Math.toRadians(180)), Math.toRadians(180))
@@ -201,8 +189,8 @@ public class DayOfAuton extends LinearOpMode {
         Actions.runBlocking(
                 new ParallelAction(
 
-                SA.keepUpdatingFor(5),
-                SA.indexNextShootSlot(3.0)
+                        SA.keepUpdatingFor(5),
+                        SA.indexNextShootSlot(3.0)
                 )
         );
         waitForStart();
@@ -210,11 +198,11 @@ public class DayOfAuton extends LinearOpMode {
         Actions.runBlocking(
                 new ParallelAction(
                         SA.keepUpdatingFor(30),
-                new SequentialAction(
-                        // SA.indexNextAngle(1.5),
-                        tab1.build()
+                        new SequentialAction(
+                                // SA.indexNextAngle(1.5),
+                                tab1.build()
+                        )
                 )
-            )
         );
 
     }
