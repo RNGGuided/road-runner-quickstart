@@ -11,8 +11,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import java.lang.Math;
 
-@Autonomous(name = "REDBACK")
-public class RedBack extends LinearOpMode {
+@Autonomous(name = "BlueFIN")
+public class BlueFin extends LinearOpMode {
 
     private ShooterSystem shooter;
     private ShooterActions SA;
@@ -103,8 +103,8 @@ public class RedBack extends LinearOpMode {
         Action Shootfar2 = new SequentialAction(
                 SA.intakeReverse(.8),
                 SA.autonMoveToNextShootIndex(colorMgr),
-                SA.setShooterRpm(4210),
-                SA.setHoodDeg(.0122),
+                SA.setShooterRpm(4225),
+                SA.setHoodDeg(.0125),
                 new SleepAction(.5),
                 SA.kickerUp(),
                 new SleepAction(0.2),
@@ -131,8 +131,8 @@ public class RedBack extends LinearOpMode {
         Action Shootfar1 = new SequentialAction(
                 SA.intakeReverse(1.0),
                 SA.autonMoveToNextShootIndex(colorMgr),
-                SA.setShooterRpm(4210),
-                SA.setHoodDeg(.0122),
+                SA.setShooterRpm(4220),
+                SA.setHoodDeg(.0125),
                 new SleepAction(.75),
                 SA.kickerUp(),
                 new SleepAction(0.2),
@@ -181,30 +181,37 @@ public class RedBack extends LinearOpMode {
                 SA.indexNextIntakeSlot(.6),
                 SA.autonRegisterIntake(colorMgr, AutonColorManager.BallColor.PURPLE)
         );
+        Action IntakeSpec = new SequentialAction(
+                new InstantAction(() -> colorMgr.clearSpindexer()),
+                SA.setIntakeIndex(0),
+                SA.intakeForward(1),
+                new SleepAction(.1),
+                SA.indexNextIntakeSlot(.6),
+                new SleepAction(.05),
+                SA.indexNextIntakeSlot(.6),
+                new SleepAction(.05),
+                SA.indexNextIntakeSlot(.6),
+                new SleepAction(.05),
+                SA.indexNextIntakeSlot(.6)
+        );
 
         // ---------------- YOUR RED PATH (UNCHANGED) ----------------
 
-        Pose2d initialPose = new Pose2d(14.509, -63.381, Math.toRadians(270));
+        Pose2d initialPose = new Pose2d(-14.509, -63.381, Math.toRadians(270));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .afterTime(0, Shootfar)
-                .strafeToLinearHeading(new Vector2d(14.509, -58.671),Math.toRadians(245.8))
+                .strafeToLinearHeading(new Vector2d(-14.509, -58.671), Math.toRadians(290.5))
                 .waitSeconds(4)
-                .strafeToLinearHeading(new Vector2d(28.5, -36.4), Math.toRadians(0))
-                .afterTime(0, Intake2)
-                .strafeTo(new Vector2d(51, -36.4), new TranslationalVelConstraint(8))
-                .afterTime(1.4, Shootfar1)
-                .strafeToLinearHeading(new Vector2d(14.509, -58.671), Math.toRadians(245.8))
-                .waitSeconds(4)
-                .strafeToLinearHeading(new Vector2d(28.25, -10.75), Math.toRadians(0))
-                .afterTime(0, Intake)
-                .strafeTo(new Vector2d(51, -10.75), new TranslationalVelConstraint(7.5))
-                .afterTime(2.2 , Shootfar2)
-                .strafeToLinearHeading(new Vector2d(14.509, -58.671), Math.toRadians(245.6))
-                .waitSeconds(4)
-                .strafeToLinearHeading(new Vector2d(36.295, -62.596), Math.toRadians(252));
-
+                .afterTime(1.6,IntakeSpec)
+                .strafeToLinearHeading(new Vector2d(-62.824, -64.167), Math.toRadians(190))
+        .strafeToLinearHeading(new Vector2d(-56.095, -59), Math.toRadians(180))
+        .strafeToLinearHeading(new Vector2d(-62.824, -64.167), Math.toRadians(180))
+                .strafeToLinearHeading(new Vector2d(-56.095, -59), Math.toRadians(180))
+        .afterTime(3, Shootfar1)
+                .strafeToLinearHeading(new Vector2d(14.509, -58.671), Math.toRadians(248.5))
+                .waitSeconds(6);
         Actions.runBlocking(
                 new ParallelAction(
                         SA.huskyUp(),
