@@ -39,7 +39,7 @@ public class Bluefront extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight = hardwareMap.get(Limelight3A.class, "Ethernet Device");
         limelight.pipelineSwitch(0);
         limelight.start();
 
@@ -59,7 +59,7 @@ public class Bluefront extends LinearOpMode {
                         SA.setShooterRpm(3400),
                         SA.waitUntil(() -> shooter.atShooterSpeed(), 1.6, true),
                         SA.autonMoveToNextShootIndex(colorMgr),
-                        SA.setHoodDeg(.485),
+                        SA.setHoodDeg(.46),
                         new SleepAction(0.3 ),
                         SA.kickerUp(),
                         new SleepAction(0.4),

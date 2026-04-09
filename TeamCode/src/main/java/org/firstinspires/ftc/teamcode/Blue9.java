@@ -41,7 +41,7 @@ public class Blue9 extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight = hardwareMap.get(Limelight3A.class, "Ethernet Device");
         limelight.pipelineSwitch(0);
         limelight.start();
 
@@ -59,14 +59,14 @@ public class Blue9 extends LinearOpMode {
         Action Shootfar= new SequentialAction
                 (
                         SA.autonMoveToNextShootIndex(colorMgr),
-                        SA.setShooterRpm(4203),
+                        SA.setShooterRpm(4275),
                         SA.waitUntil(() -> shooter.atShooterSpeed(), 2, true),
-                        SA.setHoodDeg(0.012),
+                        SA.setHoodDeg(0.01),
                         new SleepAction(.5),
                         SA.kickerUp(),
                         new SleepAction(0.4),
                         SA.kickerDown(),
-                        SA.autonConfirmShot(colorMgr),
+                         SA.autonConfirmShot(colorMgr),
                         new SleepAction(0.2),
                         SA.autonMoveToNextShootIndex(colorMgr),
                         new SleepAction(.5),
@@ -98,8 +98,8 @@ public class Blue9 extends LinearOpMode {
                 (
                         SA.intakeReverse(.8),
                         SA.autonMoveToNextShootIndex(colorMgr),
-                        SA.setShooterRpm(4210),
-                        SA.setHoodDeg(.0115),
+                        SA.setShooterRpm(4245),
+                        SA.setHoodDeg(.015),
                         new SleepAction(.5),
                         SA.kickerUp(),
                         new SleepAction(0.2),
@@ -124,8 +124,8 @@ public class Blue9 extends LinearOpMode {
                 (
                         SA.intakeReverse(1.0),
                         SA.autonMoveToNextShootIndex(colorMgr),
-                        SA.setShooterRpm(4215),
-                        SA.setHoodDeg(.012),
+                        SA.setShooterRpm(4245),
+                        SA.setHoodDeg(.005),
                         new SleepAction(.75 ),
                         SA.kickerUp(),
                         new SleepAction(0.2),
@@ -169,7 +169,7 @@ public class Blue9 extends LinearOpMode {
                 SA.setIntakeIndex(0),
                 SA.intakeForward(.9),
                 SA.autonRegisterIntake(colorMgr, AutonColorManager.BallColor.GREEN),
-                new SleepAction(.85),
+                new SleepAction(.93),
                 SA.indexNextIntakeSlot(.65),
                 SA.autonRegisterIntake(colorMgr, AutonColorManager.BallColor.PURPLE),
                 new SleepAction(.5),
@@ -194,19 +194,19 @@ public class Blue9 extends LinearOpMode {
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .afterTime(0, Shootfar)
-                .strafeToLinearHeading(new Vector2d(-14.509, -58.671), Math.toRadians(290.5))
+                .strafeToLinearHeading(new Vector2d(-14.509, -58.671), Math.toRadians(291))
                 .waitSeconds(4)
                 .strafeToLinearHeading(new Vector2d(-28.5, -36.4), Math.toRadians(180))
                 .afterTime(0, Intake2)
                 .strafeTo(new Vector2d(-51, -36.4), new TranslationalVelConstraint(8))
                 .afterTime(1.4, Shootfar1)
-                .strafeToLinearHeading(new Vector2d(-14.509, -58.671), Math.toRadians(289.4))
+                .strafeToLinearHeading(new Vector2d(-14.509, -58.671), Math.toRadians(291.4))
                 .waitSeconds(4)
                 .strafeToLinearHeading(new Vector2d(-28.25, -10.75), Math.toRadians(180))
                 .afterTime(0, Intake)
                 .strafeTo(new Vector2d(-51, -10.75), new TranslationalVelConstraint(7.5))
                 .afterTime(2.2 , Shootfar2)
-                .strafeToLinearHeading(new Vector2d(-14.509, -58.671), Math.toRadians(288.3))
+                .strafeToLinearHeading(new Vector2d(-14.509, -58.671), Math.toRadians(290.7))
                 .waitSeconds(4)
                 .strafeToLinearHeading(new Vector2d(-36.295, -62.596), Math.toRadians(292));
 

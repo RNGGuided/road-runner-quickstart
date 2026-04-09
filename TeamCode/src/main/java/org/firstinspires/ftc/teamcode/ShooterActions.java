@@ -29,6 +29,10 @@ public class ShooterActions {
         shooter.updateSpindexer();
     }
 
+    private void updateEverything() {
+        shooter.update();
+    }
+
     // =========================================================
     // SIMPLE SETTERS
     // =========================================================
@@ -226,6 +230,85 @@ public class ShooterActions {
                 if (update) updateAll();
                 return !done.getAsBoolean() &&
                         (System.nanoTime() - start) / 1e9 < timeout;
+            }
+        };
+    }
+
+    // =========================================================
+// COLOR SORTING / HUSKY
+// =========================================================
+
+    public Action updateColorDetection() {
+        return p -> {
+            shooter.updateColorDetection();
+            return false;
+        };
+    }
+
+    public Action waitForBallDetection(double timeoutSeconds) {
+        return new Action() {
+            long start = -1;
+
+            @Override
+            public boolean run(TelemetryPacket p) {
+
+                if(start < 0) start = System.nanoTime();
+
+                shooter.updateColorDetection();
+
+                boolean ballSeen = shooter.ballCurrentlyDetected;
+
+                return !ballSeen &&
+                        (System.nanoTime() - start) / 1e9 < timeoutSeconds;
+            }
+        };
+    }
+
+    public Action waitForSpecificColor(int colorID, double timeoutSeconds) {
+        return new Action() {
+            long start = -1;
+
+            @Override
+            public boolean run(TelemetryPacket p) {
+
+                if(start < 0) start = System.nanoTime();
+
+                shooter.updateColorDetection();
+
+                boolean match =
+                        shooter.ballCurrentlyDetected &&
+                                shooter.detectedColor == colorID;
+
+                return !match &&
+                        (System.nanoTime() - start) / 1e9 < timeoutSeconds;
+            }
+        };
+    }
+
+    // =========================================================
+// AUTO INDEXING
+// =========================================================
+
+    public Action runAutoIndexing() {
+        return p -> {
+            shooter.updateColorDetection();
+            return true; // keep running
+        };
+    }
+
+    public Action runAutoIndexingFor(double seconds) {
+        return new Action() {
+
+            long start = -1;
+
+            @Override
+            public boolean run(TelemetryPacket p) {
+
+                if(start < 0) start = System.nanoTime();
+
+                shooter.updateColorDetection();
+
+                return (System.nanoTime() - start) / 1e9 < seconds;
             }
         };
     }

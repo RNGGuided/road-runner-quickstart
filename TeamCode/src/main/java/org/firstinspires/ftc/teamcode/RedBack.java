@@ -22,7 +22,7 @@ public class RedBack extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight = hardwareMap.get(Limelight3A.class, "Ethernet Device");
         limelight.pipelineSwitch(0);
         limelight.start();
 
@@ -65,9 +65,9 @@ public class RedBack extends LinearOpMode {
         };
         Action Shootfar = new SequentialAction(
                 SA.autonMoveToNextShootIndex(colorMgr),
-                SA.setShooterRpm(4207),
+                SA.setShooterRpm(4300),
                 SA.waitUntil(() -> shooter.atShooterSpeed(), 2, true),
-                SA.setHoodDeg(0.0125),
+                SA.setHoodDeg(0.03),
                 new SleepAction(.5),
                 SA.kickerUp(),
                 new SleepAction(0.4),
@@ -103,8 +103,8 @@ public class RedBack extends LinearOpMode {
         Action Shootfar2 = new SequentialAction(
                 SA.intakeReverse(.8),
                 SA.autonMoveToNextShootIndex(colorMgr),
-                SA.setShooterRpm(4210),
-                SA.setHoodDeg(.0122),
+                SA.setShooterRpm(4300),
+                SA.setHoodDeg(.03),
                 new SleepAction(.5),
                 SA.kickerUp(),
                 new SleepAction(0.2),
@@ -131,8 +131,8 @@ public class RedBack extends LinearOpMode {
         Action Shootfar1 = new SequentialAction(
                 SA.intakeReverse(1.0),
                 SA.autonMoveToNextShootIndex(colorMgr),
-                SA.setShooterRpm(4210),
-                SA.setHoodDeg(.0122),
+                SA.setShooterRpm(4300),
+                SA.setHoodDeg(.03),
                 new SleepAction(.75),
                 SA.kickerUp(),
                 new SleepAction(0.2),
@@ -161,7 +161,7 @@ public class RedBack extends LinearOpMode {
                 SA.setIntakeIndex(0),
                 SA.intakeForward(.85),
                 SA.autonRegisterIntake(colorMgr, AutonColorManager.BallColor.PURPLE),
-                new SleepAction(1),
+                new SleepAction(1.05),
                 SA.indexNextIntakeSlot(.6),
                 SA.autonRegisterIntake(colorMgr, AutonColorManager.BallColor.GREEN),
                 new SleepAction(.54),
@@ -189,19 +189,19 @@ public class RedBack extends LinearOpMode {
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .afterTime(0, Shootfar)
-                .strafeToLinearHeading(new Vector2d(14.509, -58.671),Math.toRadians(245.8))
+                .strafeToLinearHeading(new Vector2d(14.509, -58.671),Math.toRadians(246))
                 .waitSeconds(4)
                 .strafeToLinearHeading(new Vector2d(28.5, -36.4), Math.toRadians(0))
                 .afterTime(0, Intake2)
                 .strafeTo(new Vector2d(51, -36.4), new TranslationalVelConstraint(8))
                 .afterTime(1.4, Shootfar1)
-                .strafeToLinearHeading(new Vector2d(14.509, -58.671), Math.toRadians(245.8))
+                .strafeToLinearHeading(new Vector2d(14.509, -58.671), Math.toRadians(246))
                 .waitSeconds(4)
                 .strafeToLinearHeading(new Vector2d(28.25, -10.75), Math.toRadians(0))
                 .afterTime(0, Intake)
                 .strafeTo(new Vector2d(51, -10.75), new TranslationalVelConstraint(7.5))
                 .afterTime(2.2 , Shootfar2)
-                .strafeToLinearHeading(new Vector2d(14.509, -58.671), Math.toRadians(245.6))
+                .strafeToLinearHeading(new Vector2d(14.509, -58.671), Math.toRadians(246))
                 .waitSeconds(4)
                 .strafeToLinearHeading(new Vector2d(36.295, -62.596), Math.toRadians(252));
 
